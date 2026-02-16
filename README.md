@@ -1,50 +1,60 @@
-# dados-card
+# Dados Card
 
-Dados Card ist eine Home-Assistant Custom Card im Dados-Stil.
+A lightweight and stable first version of a Home Assistant custom card for **light** entities.
 
-## Installation (HACS)
+## Install via HACS
 
-1. HACS → **Frontend** → Custom repositories
-2. Repository hinzufügen: `https://github.com/agrestisdavid/dados-card`
-3. Kategorie: **Dashboard**
-4. "Dados Card" installieren
-5. Home Assistant neu laden
-6. In Lovelace unter **Ressourcen** prüfen, dass `/hacsfiles/dados-card/dist/dados-card.js` geladen ist.
+1. Open **HACS** in Home Assistant.
+2. Go to **Frontend**.
+3. Click the three-dot menu → **Custom repositories**.
+4. Add repository: `https://github.com/agrestisdavid/dados-card`.
+5. Category: **Dashboard**.
+6. Install **Dados Card**.
+7. Restart Home Assistant.
+8. Verify the Lovelace resource exists:
+   - `/hacsfiles/dados-card/dist/dados-card.js`
 
-## Erste Version (Light)
+## Card Scope (Stability First)
 
-Aktuell ist die erste Version für `light`-Entities umgesetzt.
+This first release intentionally supports only `light` entities with a stable baseline feature set:
 
-### Funktionen
+- Compact header layout: icon, name/state, toggle.
+- Tap on the text area to expand/collapse controls (when `compact: true`).
+- Hold on the icon to open Home Assistant `more-info`.
+- Toggle button to call `light.toggle`.
+- Expanded brightness slider (`light.turn_on` with `brightness`).
 
-- **Compact Mode** (Standard):
-  - Layout: Icon links, Name/State mittig, Toggle rechts
-  - Tap auf die Karte: erweitert die Karte
-- **Expanded Mode**:
-  - Slider + Modus-Button für `Brightness` / `Hue` / `Temperature`
-  - Modus-Button schaltet die Slider-Funktion durch
-- **Hold auf dem linken Icon**: öffnet `more-info`
-- **Tap auf Toggle rechts**: `light.toggle`
-
-## Konfiguration
+## Configuration
 
 ```yaml
 type: custom:dados-card
-entity: light.kommode_wohnzimmer
-name: Kommode Wohnzimmer
+entity: light.living_room
+name: Living Room Light
 compact: true
 ```
 
-Optional:
+### Optional keys
 
-- `icon`: überschreibt das Entity-Icon
-- `compact`: `true` oder `false`
+- `name`: Override friendly name.
+- `icon`: Override entity icon.
+- `compact`: `true` (default) or `false`.
 
-## Button-Card Templates
+## Quick Installation & Usage Guide
 
-Alle vorhandenen YAML-Templates wurden nach:
+After HACS installation:
 
-`/templates/button-card-templates`
+1. Open a dashboard and click **Edit dashboard**.
+2. Add a **Manual card**.
+3. Paste the example YAML above.
+4. Replace `entity` with your own light entity.
+5. Save and test:
+   - tap text area → expand/collapse
+   - hold icon → more-info
+   - tap toggle → on/off
+   - move slider (expanded) → brightness
 
-verschoben.
+## Troubleshooting
 
+- If the card does not appear, do a **hard refresh** in your browser (Ctrl/Cmd + Shift + R).
+- Confirm the resource path is exactly `/hacsfiles/dados-card/dist/dados-card.js`.
+- If Home Assistant still shows an old version, restart Home Assistant once more.
