@@ -1,0 +1,7 @@
+{
+  "name": "Dados Card",
+  "content_in_root": true,
+  "render_readme": true,
+  "filename": "dist/dados-card.js",
+  "homeassistant": ">=2024.1.0"
+}
