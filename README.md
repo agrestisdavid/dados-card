@@ -12,7 +12,7 @@ A lightweight and stable first version of a Home Assistant custom card for **lig
 6. Install **Dados Card**.
 7. Restart Home Assistant.
 8. Verify the Lovelace resource exists:
-   - `/hacsfiles/dados-card/dados-card.js`
+   - `/hacsfiles/dados-card/dist/dados-card.js`
 
 ## Card Scope (Stability First)
 
@@ -56,5 +56,5 @@ After HACS installation:
 ## Troubleshooting
 
 - If the card does not appear, do a **hard refresh** in your browser (Ctrl/Cmd + Shift + R).
-- Confirm the resource path is exactly `/hacsfiles/dados-card/dados-card.js`.
+- Confirm the resource path is exactly `/hacsfiles/dados-card/dist/dados-card.js`.
 - If Home Assistant still shows an old version, restart Home Assistant once more.
