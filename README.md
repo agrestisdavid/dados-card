@@ -1,6 +1,6 @@
 # Dados Card
 
-A lightweight and stable first version of a Home Assistant custom card for **light** entities.
+A lightweight Home Assistant custom card for **light** entities, styled to match the Dados design system.
 
 ## Install via HACS
 
@@ -12,34 +12,39 @@ A lightweight and stable first version of a Home Assistant custom card for **lig
 6. Install **Dados Card**.
 7. Restart Home Assistant.
 8. Verify the Lovelace resource exists:
-   - `/hacsfiles/dados-card/dist/dados-card.js`
+   - `/hacsfiles/dados-card/dados-card.js`
 
-## Card Scope (Stability First)
+## Features
 
-This first release intentionally supports only `light` entities with a stable baseline feature set:
-
-- Compact header layout: icon, name/state, toggle.
-- Tap on the text area to expand/collapse controls (when `compact: true`).
-- Hold on the icon to open Home Assistant `more-info`.
-- Toggle button to call `light.toggle`.
-- Expanded brightness slider (`light.turn_on` with `brightness`).
+- Compact header layout: icon tile, name/state, toggle button.
+- **Tap the icon** → toggles the light on/off.
+- **Hold the icon** → opens the Home Assistant more-info dialog.
+- **Tap the name/state area** → expands/collapses the brightness slider (compact mode).
+- **Toggle button** → calls `light.toggle`.
+- Expanded **brightness slider** → calls `light.turn_on` with `brightness`.
+- Dynamic **RGB color** from the light entity tints the icon tile and toggle.
+- **Glow effect** behind the icon tile using the entity's color.
 
 ## Configuration
 
 ```yaml
 type: custom:dados-card
 entity: light.living_room
-name: Living Room Light
-compact: true
+name: Living Room Light    # optional – overrides friendly_name
+icon: mdi:ceiling-light   # optional – overrides entity icon
+compact: true              # optional – default: true
 ```
 
-### Optional keys
+### Options
 
-- `name`: Override friendly name.
-- `icon`: Override entity icon.
-- `compact`: `true` (default) or `false`.
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `entity` | string | **required** | Light entity ID |
+| `name` | string | friendly_name | Override the displayed name |
+| `icon` | string | state-based | Override the icon (MDI) |
+| `compact` | boolean | `true` | `true` = starts collapsed, tap name to expand |
 
-## Quick Installation & Usage Guide
+## Quick Start
 
 After HACS installation:
 
@@ -47,14 +52,9 @@ After HACS installation:
 2. Add a **Manual card**.
 3. Paste the example YAML above.
 4. Replace `entity` with your own light entity.
-5. Save and test:
-   - tap text area → expand/collapse
-   - hold icon → more-info
-   - tap toggle → on/off
-   - move slider (expanded) → brightness
 
 ## Troubleshooting
 
-- If the card does not appear, do a **hard refresh** in your browser (Ctrl/Cmd + Shift + R).
-- Confirm the resource path is exactly `/hacsfiles/dados-card/dist/dados-card.js`.
+- If the card does not appear, do a **hard refresh** (Ctrl/Cmd + Shift + R).
+- Confirm the resource path is exactly `/hacsfiles/dados-card/dados-card.js`.
 - If Home Assistant still shows an old version, restart Home Assistant once more.
