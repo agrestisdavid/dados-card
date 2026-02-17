@@ -1,20 +1,23 @@
-const CARD_VERSION = '1.4.0';
+const CARD_VERSION = '1.5.0';
 
-// ─── Defaults ────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────
 
 const DEFAULTS = {
-  icon_on: 'mdi:lightbulb',
-  icon_off: 'mdi:lightbulb-outline',
-  toggle_icon_on: 'mdi:toggle-switch',
+  icon_on:         'mdi:lightbulb',
+  icon_off:        'mdi:lightbulb-outline',
+  toggle_icon_on:  'mdi:toggle-switch',
   toggle_icon_off: 'mdi:toggle-switch-off-outline',
-  hold_ms: 500,
-  glow: true,
+  hold_ms:         500,
+  glow:            true,
 };
 
-// Default cell/glow color ≈ var(--state-light-on-color)
-const CELL_FALLBACK_RGB = [255, 218, 120];
+/** Fallback when the light has no color/temp info and no config.color is set.
+ *  Approximates var(--state-light-on-color). */
+const FALLBACK_RGB = [255, 218, 120];
 
-// ─── Color helpers ───────────────────────────────────────────
+// ─── Color utilities ─────────────────────────────────────────
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 function rgba(rgb, a) {
   return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
@@ -24,56 +27,76 @@ function rgbCss(rgb) {
   return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
-/** Parse hex or rgb() string → [r,g,b] array, or null for CSS vars / unknowns. */
-function parseColorToRgb(color) {
+/** hex / rgb(r,g,b) → [r,g,b] or null (for CSS vars, keywords, …). */
+function parseRgb(color) {
   if (!color || typeof color !== 'string') return null;
   const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
   if (hex) {
     return hex.length === 3
-      ? hex.split('').map((c) => parseInt(c + c, 16))
-      : [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+      ? hex.split('').map(c => parseInt(c + c, 16))
+      : [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
   }
-  const m = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
-  if (m) return [+m[1], +m[2], +m[3]];
-  return null;
+  const m = color.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  return m ? [+m[1], +m[2], +m[3]] : null;
 }
 
-/** Resolve config color string → [r,g,b]. Falls back to `fallback` array. */
-function resolveRgb(configValue, fallback) {
-  if (!configValue) return fallback;
-  return parseColorToRgb(configValue) ?? fallback;
+/** Simplified Tanner-Helland algorithm: mireds → [r,g,b]. */
+function miredsToRgb(mireds) {
+  const t = (1_000_000 / mireds) / 100;
+  const r = t <= 66 ? 255 : clamp(Math.round(329.698727 * Math.pow(t - 60, -0.13320476)), 0, 255);
+  const g = t <= 66
+    ? clamp(Math.round(99.4708025 * Math.log(t) - 161.1195681), 0, 255)
+    : clamp(Math.round(288.1221695 * Math.pow(t - 60, -0.07551485)), 0, 255);
+  const b = t >= 66 ? 255 : (t <= 19 ? 0 : clamp(Math.round(138.5177312 * Math.log(t - 10) - 305.0447927), 0, 255));
+  return [r, g, b];
 }
 
-// ─── Static stylesheet ───────────────────────────────────────
-// 1rem = 16px | card = 2×1.25rem padding + 2.8125rem icon = 5.3125rem
-// → equal 1.25rem (20px) spacing on all 4 sides
+/** Extract the light's current RGB from state attributes. */
+function haLightRgb(stateObj) {
+  if (stateObj.attributes.rgb_color) return [...stateObj.attributes.rgb_color];
+  if (typeof stateObj.attributes.color_temp === 'number') return miredsToRgb(stateObj.attributes.color_temp);
+  return null; // signal "no color info"
+}
+
+// ─── Stylesheet ───────────────────────────────────────────────
+// 1rem = 16px
+// Compact height = 5.25rem (84px) = 2 × 1.3125rem padding + 2.625rem row
+// Card fills parent height if a grid row height is defined (sections dashboard)
 
 const STYLES = /* css */ `
-  :host { display: block; }
+  :host {
+    display: block;
+    height: 100%;
+  }
 
   ha-card {
-    border-radius: 2.25rem;
-    padding: 1.25rem;
-    min-height: calc(2.8125rem + 2.5rem);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 5.25rem;
     box-sizing: border-box;
+    border-radius: 2.25rem;
+    padding: 1.3125rem 1.25rem;
     overflow: hidden;
     backdrop-filter: blur(20px);
     background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
 
+  /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
     grid-template-columns: 2.8125rem 1fr auto;
     align-items: center;
     gap: 0.625rem;
-    min-height: 2.8125rem;
+    flex-shrink: 0;
   }
 
+  /* ── Icon tile ───────────────────────────────────────────────── */
   .icon-tile {
     width: 2.8125rem;
     height: 2.8125rem;
     border-radius: 1.125rem;
-    background: var(--dados-cell-bg);
+    background: var(--dados-cell-bg, rgba(127,127,127,0.15));
     box-shadow: var(--dados-glow, none);
     display: flex;
     align-items: center;
@@ -82,20 +105,18 @@ const STYLES = /* css */ `
     border: none;
     padding: 0;
     overflow: visible;
-    transition: background 0.3s, box-shadow 0.3s;
     flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
   }
 
   .icon-tile ha-icon {
     --mdc-icon-size: 2rem;
-    color: var(--dados-icon-color);
+    color: var(--dados-icon-color, var(--contrast2, #fff));
     transition: color 0.3s;
   }
 
-  .text {
-    min-width: 0;
-    cursor: pointer;
-  }
+  /* ── Text block ──────────────────────────────────────────────── */
+  .text { min-width: 0; cursor: pointer; }
 
   .name {
     font-size: var(--dados-name-fs, 1rem);
@@ -104,7 +125,7 @@ const STYLES = /* css */ `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--contrast16);
+    color: var(--dados-name-color, var(--contrast16, var(--primary-text-color)));
     letter-spacing: 0.025rem;
     padding-left: 0.1875rem;
   }
@@ -112,17 +133,18 @@ const STYLES = /* css */ `
   .state {
     font-size: var(--dados-state-fs, 0.875rem);
     font-weight: 400;
-    color: var(--contrast12, var(--secondary-text-color));
+    color: var(--dados-state-color, var(--contrast12, var(--secondary-text-color)));
     letter-spacing: 0.0375rem;
     padding-left: 0.1875rem;
   }
 
+  /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
     width: 2.9375rem;
     height: 2.9375rem;
     border: none;
     border-radius: 0.9375rem;
-    background: var(--contrast3, rgba(127, 127, 127, 0.15));
+    background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -134,17 +156,17 @@ const STYLES = /* css */ `
 
   .toggle-btn ha-icon {
     --mdc-icon-size: 1.875rem;
-    color: var(--dados-toggle-color);
+    color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
   }
 
-  /* ── Controls (sliders) ──────────────────────────────── */
-
+  /* ── Slider controls ─────────────────────────────────────────── */
   .controls {
     margin-top: 0.875rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    flex-shrink: 0;
   }
 
   .slider-row {
@@ -154,7 +176,7 @@ const STYLES = /* css */ `
     align-items: center;
   }
 
-  /* Pill slider base */
+  /* Pill slider — shared base */
   .dado-slider {
     -webkit-appearance: none;
     appearance: none;
@@ -168,86 +190,78 @@ const STYLES = /* css */ `
     padding: 0;
   }
 
-  /* Chrome/Safari thumb */
+  /* White oval thumb (color-temp & hue) — no shadow */
   .dado-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 1.125rem;
     height: 2.625rem;
     border-radius: 0.5625rem;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.2);
+    background: rgba(255,255,255,0.92);
+    box-shadow: none;
     cursor: pointer;
   }
-
-  /* Firefox track */
+  .dado-slider::-moz-range-thumb {
+    width: 1.125rem;
+    height: 2.625rem;
+    border-radius: 0.5625rem;
+    background: rgba(255,255,255,0.92);
+    box-shadow: none;
+    border: none;
+    cursor: pointer;
+  }
   .dado-slider::-moz-range-track {
     height: 3.125rem;
     border-radius: 1.5625rem;
     border: none;
   }
 
-  /* Firefox thumb */
-  .dado-slider::-moz-range-thumb {
-    width: 1.125rem;
+  /* ── Brightness slider: progress-bar style, thin dark thumb ── */
+  .brightness-slider {
+    background: var(--_bright-bg, rgba(127,127,127,0.3));
+  }
+  .brightness-slider::-moz-range-track {
+    background: var(--_bright-bg, rgba(127,127,127,0.3));
+  }
+  .brightness-slider::-webkit-slider-thumb {
+    width: 0.375rem;
     height: 2.625rem;
-    border-radius: 0.5625rem;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-radius: 0.1875rem;
+    background: rgba(0,0,0,0.5);
+    box-shadow: none;
+    cursor: pointer;
+  }
+  .brightness-slider::-moz-range-thumb {
+    width: 0.375rem;
+    height: 2.625rem;
+    border-radius: 0.1875rem;
+    background: rgba(0,0,0,0.5);
+    box-shadow: none;
     border: none;
     cursor: pointer;
   }
 
-  /* Per-slider backgrounds */
-  .brightness-slider {
-    background: var(--dados-bright-bg, rgba(127, 127, 127, 0.3));
-  }
-  .brightness-slider::-moz-range-track {
-    background: var(--dados-bright-bg, rgba(127, 127, 127, 0.3));
-  }
-
-  .colortemp-slider {
-    background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
-  }
+  /* ── Color-temp slider: fixed cool→warm gradient ── */
+  .colortemp-slider,
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
   }
 
-  .hue-slider {
-    background: linear-gradient(
-      to right,
-      hsl(0, 100%, 50%),
-      hsl(45, 100%, 50%),
-      hsl(90, 100%, 50%),
-      hsl(135, 100%, 50%),
-      hsl(180, 100%, 50%),
-      hsl(225, 100%, 50%),
-      hsl(270, 100%, 50%),
-      hsl(315, 100%, 50%),
-      hsl(360, 100%, 50%)
-    );
-  }
+  /* ── Hue slider: rainbow ── */
+  .hue-slider,
   .hue-slider::-moz-range-track {
-    background: linear-gradient(
-      to right,
-      hsl(0, 100%, 50%),
-      hsl(45, 100%, 50%),
-      hsl(90, 100%, 50%),
-      hsl(135, 100%, 50%),
-      hsl(180, 100%, 50%),
-      hsl(225, 100%, 50%),
-      hsl(270, 100%, 50%),
-      hsl(315, 100%, 50%),
-      hsl(360, 100%, 50%)
-    );
+    background: linear-gradient(to right,
+      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
+      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
+      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
   }
 
-  /* Icon button next to slider */
+  /* ── Indicator button next to each slider ── */
   .ctrl-btn {
     width: 3.125rem;
     height: 3.125rem;
     border: none;
     border-radius: 1rem;
-    background: var(--contrast3, rgba(127, 127, 127, 0.15));
+    background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -255,59 +269,51 @@ const STYLES = /* css */ `
     flex-shrink: 0;
     cursor: default;
   }
-
   .ctrl-btn ha-icon {
     --mdc-icon-size: 1.375rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
-  .hidden { display: none; }
-
-  .missing {
-    padding: 0.875rem;
-    color: var(--error-color);
-  }
+  .hidden { display: none !important; }
 `;
 
-// ─── UI Editor ───────────────────────────────────────────────
+// ─── Editor schema ───────────────────────────────────────────
 
 const EDITOR_SCHEMA = [
-  { name: 'entity', required: true, selector: { entity: { domain: 'light' } } },
-  { name: 'name', label: 'Name', selector: { text: {} } },
+  { name: 'entity',   required: true, selector: { entity: { domain: 'light' } } },
+  { name: 'name',     label: 'Name',  selector: { text: {} } },
   {
-    type: 'expandable',
-    title: 'Farben',
+    type: 'expandable', title: 'Farben',
     schema: [
-      {
-        name: 'color',
-        label: 'Farbe — Glow + Img Cell (Standard: HA Lichtfarbe)',
-        selector: { text: {} },
-      },
-      { name: 'toggle_color', label: 'Toggle Color', selector: { text: {} } },
-      { name: 'icon_color', label: 'Icon-Farbe wenn an', selector: { text: {} } },
-      { name: 'card_background_color', label: 'Kartenhintergrund', selector: { text: {} } },
+      { name: 'color',                label: 'Farbe — Glow + Img Cell (Standard: Lichtfarbe)', selector: { text: {} } },
+      { name: 'toggle_color',         label: 'Toggle Color',                                   selector: { text: {} } },
+      { name: 'icon_color',           label: 'Icon-Farbe wenn an',                             selector: { text: {} } },
+      { name: 'brightness_color',     label: 'Brightness Slider Farbe',                        selector: { text: {} } },
+      { name: 'card_background_color',label: 'Kartenhintergrund',                              selector: { text: {} } },
     ],
   },
   {
-    type: 'expandable',
-    title: 'Icons',
+    type: 'expandable', title: 'Icons',
     schema: [
-      { name: 'icon_on', label: 'Icon (An)', selector: { icon: {} } },
-      { name: 'icon_off', label: 'Icon (Aus)', selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)', selector: { icon: {} } },
-      { name: 'toggle_icon_off', label: 'Toggle Icon (Aus)', selector: { icon: {} } },
+      { name: 'icon_on',        label: 'Icon (An)',         selector: { icon: {} } },
+      { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
+      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
+      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
     ],
   },
   {
-    type: 'expandable',
-    title: 'Schrift & Effekte',
+    type: 'expandable', title: 'Schrift & Effekte',
     schema: [
-      { name: 'name_font_size', label: 'Name Schriftgröße (z.B. 1rem, 16px)', selector: { text: {} } },
-      { name: 'state_font_size', label: 'State Schriftgröße (z.B. 0.875rem, 14px)', selector: { text: {} } },
-      { name: 'glow', label: 'Glow-Effekt', selector: { boolean: {} } },
+      { name: 'name_font_size',  label: 'Name Schriftgröße (z.B. 1rem)',          selector: { text: {} } },
+      { name: 'state_font_size', label: 'State Schriftgröße (z.B. 0.875rem)',     selector: { text: {} } },
+      { name: 'name_color',      label: 'Name Farbe',                             selector: { text: {} } },
+      { name: 'state_color',     label: 'State Farbe',                            selector: { text: {} } },
+      { name: 'glow',            label: 'Glow-Effekt',                            selector: { boolean: {} } },
     ],
   },
 ];
+
+// ─── Editor element ──────────────────────────────────────────
 
 class DadosCardEditor extends HTMLElement {
   constructor() {
@@ -317,16 +323,12 @@ class DadosCardEditor extends HTMLElement {
 
   setConfig(config) {
     this._config = { ...config };
-    if (this._form) {
-      this._form.data = this._config;
-    } else {
-      this._build();
-    }
+    this._form ? (this._form.data = this._config) : this._build();
   }
 
-  set hass(hass) {
-    this._hass = hass;
-    if (this._form) this._form.hass = hass;
+  set hass(h) {
+    this._hass = h;
+    if (this._form) this._form.hass = h;
   }
 
   _build() {
@@ -334,16 +336,12 @@ class DadosCardEditor extends HTMLElement {
     form.schema = EDITOR_SCHEMA;
     form.data = this._config;
     form.hass = this._hass;
-    form.computeLabel = (s) => s.label ?? s.name;
-    form.addEventListener('value-changed', (e) => {
+    form.computeLabel = s => s.label ?? s.name;
+    form.addEventListener('value-changed', e => {
       this._config = e.detail.value;
-      this.dispatchEvent(
-        new CustomEvent('config-changed', {
-          detail: { config: this._config },
-          bubbles: true,
-          composed: true,
-        }),
-      );
+      this.dispatchEvent(new CustomEvent('config-changed', {
+        detail: { config: this._config }, bubbles: true, composed: true,
+      }));
     });
     this._form = form;
     this.shadowRoot.appendChild(form);
@@ -354,405 +352,353 @@ if (!customElements.get('dados-card-editor')) {
   customElements.define('dados-card-editor', DadosCardEditor);
 }
 
-// ─── Card ────────────────────────────────────────────────────
+// ─── Card element ─────────────────────────────────────────────
 
 class DadosCard extends HTMLElement {
-  static getConfigElement() {
-    return document.createElement('dados-card-editor');
-  }
+
+  // ── Static API ─────────────────────────────────────────────
+
+  static getConfigElement() { return document.createElement('dados-card-editor'); }
 
   static getStubConfig() {
-    return {
-      type: 'custom:dados-card',
-      entity: 'light.example',
-      name: 'Dados Light',
-    };
+    return { type: 'custom:dados-card', entity: 'light.example', name: 'Dados Light' };
   }
 
-  /* ── HA lifecycle ──────────────────────────────────────────── */
+  // ── HA lifecycle ───────────────────────────────────────────
 
   setConfig(config) {
-    if (!config?.entity) throw new Error('You need to define an entity');
-
-    this._config = { ...DEFAULTS, ...config };
+    if (!config?.entity) throw new Error('entity required');
+    this._cfg = { ...DEFAULTS, ...config };
     this._expanded = false;
     this._stateKey = null;
+    this._effectiveRgb = FALLBACK_RGB;
 
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
-
     this._buildDom();
     if (this._hass) this._update();
   }
 
-  set hass(hass) {
-    this._hass = hass;
+  set hass(h) {
+    this._hass = h;
     this._update();
   }
 
-  getCardSize() {
-    return this._expanded ? 4 : 2;
-  }
+  getCardSize() { return this._expanded ? 4 : 2; }
 
   getLayoutOptions() {
-    return {
-      grid_rows: 1,
-      grid_min_rows: 1,
-      grid_max_rows: 2,
-      grid_columns: 2,
-      grid_min_columns: 1,
-      grid_max_columns: 4,
-    };
+    return { grid_rows: 1, grid_min_rows: 1, grid_max_rows: 2, grid_columns: 2, grid_min_columns: 1, grid_max_columns: 4 };
   }
 
-  /* ── Capability helpers ────────────────────────────────────── */
-
-  _supports(stateObj, feature) {
-    const modes = stateObj.attributes.supported_color_modes ?? [];
-    const sf = stateObj.attributes.supported_features ?? 0;
-    switch (feature) {
-      case 'brightness':
-        return modes.length ? modes.some((m) => m !== 'onoff') : !!(sf & 1);
-      case 'color_temp':
-        return modes.length ? modes.includes('color_temp') : !!(sf & 2);
-      case 'color':
-        return modes.length
-          ? modes.some((m) => ['rgb', 'rgbw', 'rgbww', 'hs', 'xy'].includes(m))
-          : !!(sf & 16);
-      default:
-        return false;
-    }
-  }
-
-  /* ── One-time DOM build ────────────────────────────────────── */
+  // ── DOM build (once) ───────────────────────────────────────
 
   _buildDom() {
     this.shadowRoot.innerHTML = `
       <style>${STYLES}</style>
       <ha-card>
         <div class="row">
-          <button class="icon-tile" id="iconBtn" aria-label="Toggle light">
+          <button class="icon-tile" id="iconBtn" aria-label="Toggle">
             <ha-icon id="iconEl"></ha-icon>
           </button>
           <div class="text" id="textBlock">
-            <div class="name" id="nameEl"></div>
+            <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle light">
+          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle">
             <ha-icon id="toggleIconEl"></ha-icon>
           </button>
         </div>
         <div class="controls hidden" id="controls">
-          <div class="slider-row" id="brightnessRow">
-            <input class="dado-slider brightness-slider" id="brightnessSlider"
-                   type="range" min="1" max="255" step="1" aria-label="Helligkeit" />
+          <div class="slider-row" id="brightRow">
+            <input class="dado-slider brightness-slider" id="brightSlider"
+                   type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
             <button class="ctrl-btn" tabindex="-1">
               <ha-icon icon="mdi:brightness-percent"></ha-icon>
             </button>
           </div>
-          <div class="slider-row hidden" id="colorTempRow">
-            <input class="dado-slider colortemp-slider" id="colorTempSlider"
-                   type="range" step="1" aria-label="Farbtemperatur" />
+          <div class="slider-row hidden" id="ctRow">
+            <input class="dado-slider colortemp-slider" id="ctSlider"
+                   type="range" step="1" aria-label="Farbtemperatur"/>
             <button class="ctrl-btn" tabindex="-1">
               <ha-icon icon="mdi:thermometer"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="hueRow">
             <input class="dado-slider hue-slider" id="hueSlider"
-                   type="range" min="0" max="360" step="1" aria-label="Farbe" />
+                   type="range" min="0" max="360" step="1" aria-label="Farbe"/>
             <button class="ctrl-btn" tabindex="-1">
               <ha-icon icon="mdi:palette"></ha-icon>
             </button>
           </div>
         </div>
-      </ha-card>
-    `;
+      </ha-card>`;
 
-    const $ = (id) => this.shadowRoot.getElementById(id);
-
+    const $ = id => this.shadowRoot.getElementById(id);
     this._el = {
-      card: this.shadowRoot.querySelector('ha-card'),
-      iconBtn: $('iconBtn'),
-      iconEl: $('iconEl'),
-      nameEl: $('nameEl'),
-      stateEl: $('stateEl'),
-      toggleBtn: $('toggleBtn'),
-      toggleIconEl: $('toggleIconEl'),
-      textBlock: $('textBlock'),
-      controls: $('controls'),
-      brightnessRow: $('brightnessRow'),
-      brightnessSlider: $('brightnessSlider'),
-      colorTempRow: $('colorTempRow'),
-      colorTempSlider: $('colorTempSlider'),
-      hueRow: $('hueRow'),
-      hueSlider: $('hueSlider'),
+      card:         this.shadowRoot.querySelector('ha-card'),
+      iconBtn:      $('iconBtn'),   iconEl:      $('iconEl'),
+      nameEl:       $('nameEl'),    stateEl:     $('stateEl'),
+      toggleBtn:    $('toggleBtn'), toggleIconEl:$('toggleIconEl'),
+      textBlock:    $('textBlock'),
+      controls:     $('controls'),
+      brightRow:    $('brightRow'), brightSlider:$('brightSlider'),
+      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),
+      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),
     };
-
     this._bindEvents();
   }
 
-  /* ── Targeted DOM updates ──────────────────────────────────── */
+  // ── Update (targeted, dirty-checked) ──────────────────────
 
   _update() {
     if (!this._hass || !this._el) return;
 
-    const stateObj = this._hass.states[this._config.entity];
-
-    if (!stateObj) {
+    const state = this._hass.states[this._cfg.entity];
+    if (!state) {
       if (this._stateKey !== '__missing__') {
         this._stateKey = '__missing__';
-        this._el.nameEl.textContent = `Entity not found: ${this._config.entity}`;
+        this._el.nameEl.textContent  = `Entity not found: ${this._cfg.entity}`;
         this._el.stateEl.textContent = '';
       }
       return;
     }
 
-    // Dirty check — state attributes only; config resets _stateKey via setConfig()
-    const hs = stateObj.attributes.hs_color ?? [];
-    const key = `${stateObj.state}|${stateObj.attributes.brightness ?? ''}|${stateObj.attributes.color_temp ?? ''}|${stateObj.attributes.rgb_color ?? ''}|${hs[0] ?? ''}`;
+    const hs  = state.attributes.hs_color ?? [];
+    const key = [
+      state.state,
+      state.attributes.brightness   ?? '',
+      state.attributes.color_temp   ?? '',
+      state.attributes.rgb_color    ?? '',
+      hs[0] ?? '',
+    ].join('|');
     if (key === this._stateKey) return;
     this._stateKey = key;
 
-    const isOn = stateObj.state === 'on';
+    const isOn = state.state === 'on';
 
-    // ── Capability detection ─────────────────────────────────────
-    const hasBrightness = this._supports(stateObj, 'brightness');
-    const hasColorTemp = this._supports(stateObj, 'color_temp');
-    const hasColor = this._supports(stateObj, 'color');
-    const hasAny = hasBrightness || hasColorTemp || hasColor;
+    // ── Capabilities ───────────────────────────────────────
+    const hasBright = this._supports(state, 'brightness');
+    const hasCT     = this._supports(state, 'color_temp');
+    const hasColor  = this._supports(state, 'color');
+    const hasAny    = hasBright || hasCT || hasColor;
 
-    this._el.brightnessRow.classList.toggle('hidden', !hasBrightness);
-    this._el.colorTempRow.classList.toggle('hidden', !hasColorTemp);
+    this._el.brightRow.classList.toggle('hidden', !hasBright);
+    this._el.ctRow.classList.toggle('hidden', !hasCT);
     this._el.hueRow.classList.toggle('hidden', !hasColor);
+    if (!hasAny) { this._expanded = false; }
+    this._el.controls.classList.toggle('hidden', !this._expanded || !hasAny);
 
-    if (!hasAny) {
-      this._expanded = false;
-      this._el.controls.classList.add('hidden');
-    } else {
-      this._el.controls.classList.toggle('hidden', !this._expanded);
-    }
-
-    // ── Color resolution ─────────────────────────────────────────
+    // ── Color resolution ───────────────────────────────────
     //
-    // Glow + Cell: config.color → CELL_FALLBACK_RGB [255,218,120]
-    //   (intentionally does NOT use HA rgb_color as default for glow/cell)
+    // Priority for Glow + Img Cell:
+    //   1. config.color  (user override)
+    //   2. HA light's rgb_color
+    //   3. HA light's color_temp → converted to RGB
+    //   4. FALLBACK_RGB  [255,218,120]  (≈ --state-light-on-color)
     //
-    // Toggle: config.toggle_color → HA rgb_color → CELL_FALLBACK_RGB
-    //   (completely independent from the color field — bug fix)
+    // Toggle colour is independent: config.toggle_color → HA rgb_color → FALLBACK_RGB
 
-    const baseRgb = resolveRgb(this._config.color, CELL_FALLBACK_RGB);
-    const haRgb = stateObj.attributes.rgb_color ?? CELL_FALLBACK_RGB;
-    const toggleColorCss = this._config.toggle_color ?? rgbCss(haRgb);
+    const lightRgb   = haLightRgb(state);   // may be null if no color info
+    const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
-    // ── Text ─────────────────────────────────────────────────────
+    // effectiveRgb is used wherever we need an [r,g,b] array (glow, brightness gradient)
+    const effectiveRgb = cfgRgb ?? lightRgb ?? FALLBACK_RGB;
+    this._effectiveRgb = effectiveRgb;       // stored for real-time brightness updates
+
+    // Cell background — supports CSS vars in config.color
+    const cellBg = isOn
+      ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 0.7))
+      : 'var(--contrast3, rgba(127,127,127,0.15))';
+
+    // Toggle colour
+    const toggleCss = isOn
+      ? (this._cfg.toggle_color ?? (lightRgb ? rgbCss(lightRgb) : rgbCss(FALLBACK_RGB)))
+      : 'var(--secondary-text-color)';
+
+    // ── Text ───────────────────────────────────────────────
     this._el.nameEl.textContent =
-      this._config.name || stateObj.attributes.friendly_name || this._config.entity;
-    this._el.stateEl.textContent = this._stateLabel(stateObj);
+      this._cfg.name || state.attributes.friendly_name || this._cfg.entity;
+    this._el.stateEl.textContent = this._stateLabel(state, isOn);
 
-    // ── Icons ────────────────────────────────────────────────────
-    this._el.iconEl.setAttribute(
-      'icon',
-      this._config.icon || (isOn ? this._config.icon_on : this._config.icon_off),
-    );
-    this._el.toggleIconEl.setAttribute(
-      'icon',
-      isOn ? this._config.toggle_icon_on : this._config.toggle_icon_off,
-    );
+    // ── Icons ──────────────────────────────────────────────
+    this._el.iconEl.setAttribute('icon',
+      this._cfg.icon || (isOn ? this._cfg.icon_on : this._cfg.icon_off));
+    this._el.toggleIconEl.setAttribute('icon',
+      isOn ? this._cfg.toggle_icon_on : this._cfg.toggle_icon_off);
 
-    // ── Slider values ────────────────────────────────────────────
-    if (hasBrightness) {
-      this._el.brightnessSlider.value = Math.max(1, stateObj.attributes.brightness ?? 1);
+    // ── Slider values ──────────────────────────────────────
+    if (hasBright) {
+      const bv = Math.max(1, state.attributes.brightness ?? 1);
+      this._el.brightSlider.value = bv;
+      this._setBrightnessProgress(bv);
     }
-    if (hasColorTemp) {
-      const minM = stateObj.attributes.min_mireds ?? 153;
-      const maxM = stateObj.attributes.max_mireds ?? 500;
-      this._el.colorTempSlider.min = minM;
-      this._el.colorTempSlider.max = maxM;
-      this._el.colorTempSlider.value = stateObj.attributes.color_temp ?? minM;
+    if (hasCT) {
+      const minM = state.attributes.min_mireds ?? 153;
+      const maxM = state.attributes.max_mireds ?? 500;
+      this._el.ctSlider.min   = minM;
+      this._el.ctSlider.max   = maxM;
+      this._el.ctSlider.value = state.attributes.color_temp ?? minM;
     }
     if (hasColor) {
-      this._el.hueSlider.value = stateObj.attributes.hs_color?.[0] ?? 180;
+      this._el.hueSlider.value = state.attributes.hs_color?.[0] ?? 180;
     }
 
-    // ── CSS custom properties ────────────────────────────────────
+    // ── CSS custom properties (on ha-card for scope) ───────
     const s = this._el.card.style;
-    const glowOn = isOn && this._config.glow !== false;
 
-    // Cell background (img cell)
-    s.setProperty(
-      '--dados-cell-bg',
-      isOn ? rgba(baseRgb, 0.7) : 'var(--contrast3, rgba(127,127,127,0.15))',
-    );
-
-    // Glow
-    s.setProperty(
-      '--dados-glow',
-      glowOn
-        ? `-55px -50px 70px 20px ${rgba(baseRgb, 0.7)}, -35px -35px 70px 10px ${rgba(baseRgb, 0.8)}`
-        : 'none',
-    );
-
-    // Icon color (inside cell)
-    s.setProperty(
-      '--dados-icon-color',
-      isOn ? (this._config.icon_color || 'var(--contrast2, #fff)') : 'var(--contrast16, #888)',
-    );
-
-    // Toggle icon color — independent from color
-    s.setProperty('--dados-toggle-color', isOn ? toggleColorCss : 'var(--secondary-text-color)');
-
-    // Brightness slider gradient (dark → bright using cell color)
-    const darkRgb = baseRgb.map((c) => Math.round(c * 0.28));
-    s.setProperty(
-      '--dados-bright-bg',
-      `linear-gradient(to right, rgb(${darkRgb.join(',')}), ${rgbCss(baseRgb)})`,
-    );
+    s.setProperty('--dados-cell-bg',    cellBg);
+    s.setProperty('--dados-glow',       (isOn && this._cfg.glow !== false)
+      ? `-55px -50px 70px 20px ${rgba(effectiveRgb, 0.7)}, -35px -35px 70px 10px ${rgba(effectiveRgb, 0.8)}`
+      : 'none');
+    s.setProperty('--dados-icon-color', isOn
+      ? (this._cfg.icon_color || 'var(--contrast2, #fff)')
+      : 'var(--contrast16, #888)');
+    s.setProperty('--dados-toggle-color', toggleCss);
 
     // Font sizes
-    if (this._config.name_font_size) {
-      s.setProperty('--dados-name-fs', this._config.name_font_size);
-    } else {
-      s.removeProperty('--dados-name-fs');
-    }
-    if (this._config.state_font_size) {
-      s.setProperty('--dados-state-fs', this._config.state_font_size);
-    } else {
-      s.removeProperty('--dados-state-fs');
-    }
-
+    this._setProp(s, '--dados-name-fs',    this._cfg.name_font_size);
+    this._setProp(s, '--dados-state-fs',   this._cfg.state_font_size);
+    // Font colours
+    this._setProp(s, '--dados-name-color', this._cfg.name_color);
+    this._setProp(s, '--dados-state-color',this._cfg.state_color);
     // Card background
-    if (this._config.card_background_color) {
-      s.setProperty('--dados-card-bg', this._config.card_background_color);
-    } else {
-      s.removeProperty('--dados-card-bg');
+    this._setProp(s, '--dados-card-bg',    this._cfg.card_background_color);
+  }
+
+  /** Set or remove a CSS custom property depending on whether value is truthy. */
+  _setProp(style, prop, value) {
+    value ? style.setProperty(prop, value) : style.removeProperty(prop);
+  }
+
+  // ── Brightness progress helper ─────────────────────────────
+
+  /** Updates the progress-bar background of the brightness slider in real time. */
+  _setBrightnessProgress(value) {
+    const rgb      = this._effectiveRgb;
+    const pct      = Math.round((value / 255) * 100);
+    const progCss  = this._cfg.brightness_color || rgbCss(rgb);
+    const trackRgb = rgb.map(c => Math.round(c * 0.35));
+    const trackCss = rgbCss(trackRgb);
+    // CSS var on the slider element → picked up by both Webkit and Firefox rules
+    this._el.brightSlider.style.setProperty('--_bright-bg',
+      `linear-gradient(to right, ${progCss} ${pct}%, ${trackCss} ${pct}%)`);
+  }
+
+  // ── Capability detection ───────────────────────────────────
+
+  _supports(state, feature) {
+    const modes = state.attributes.supported_color_modes ?? [];
+    const sf    = state.attributes.supported_features    ?? 0;
+    switch (feature) {
+      case 'brightness': return modes.length ? modes.some(m => m !== 'onoff') : !!(sf & 1);
+      case 'color_temp': return modes.length ? modes.includes('color_temp')   : !!(sf & 2);
+      case 'color':      return modes.length
+        ? modes.some(m => ['rgb','rgbw','rgbww','hs','xy'].includes(m))
+        : !!(sf & 16);
+      default: return false;
     }
   }
 
-  /* ── Event binding (once per _buildDom) ────────────────────── */
+  // ── Event binding (once) ───────────────────────────────────
 
   _bindEvents() {
-    this._el.toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this._toggleLight();
-    });
+    const { toggleBtn, textBlock, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
 
-    this._el.textBlock.addEventListener('click', () => {
-      const stateObj = this._hass?.states[this._config.entity];
-      if (!stateObj) return;
-      const hasAny =
-        this._supports(stateObj, 'brightness') ||
-        this._supports(stateObj, 'color_temp') ||
-        this._supports(stateObj, 'color');
+    toggleBtn.addEventListener('click', e => { e.stopPropagation(); this._toggle(); });
+
+    textBlock.addEventListener('click', () => {
+      const state = this._hass?.states[this._cfg.entity];
+      if (!state) return;
+      const hasAny = this._supports(state,'brightness') || this._supports(state,'color_temp') || this._supports(state,'color');
       if (!hasAny) return;
       this._expanded = !this._expanded;
       this._el.controls.classList.toggle('hidden', !this._expanded);
     });
 
-    this._el.brightnessSlider.addEventListener('change', (e) => {
+    // Brightness — real-time visual + HA call on release
+    brightSlider.addEventListener('input',  e => this._setBrightnessProgress(+e.target.value));
+    brightSlider.addEventListener('change', e => {
       e.stopPropagation();
-      this._hass.callService('light', 'turn_on', {
-        entity_id: this._config.entity,
-        brightness: +e.target.value,
-      });
+      this._call('turn_on', { brightness: +e.target.value });
     });
 
-    this._el.colorTempSlider.addEventListener('change', (e) => {
+    ctSlider.addEventListener('change', e => {
       e.stopPropagation();
-      this._hass.callService('light', 'turn_on', {
-        entity_id: this._config.entity,
-        color_temp: +e.target.value,
-      });
+      this._call('turn_on', { color_temp: +e.target.value });
     });
 
-    this._el.hueSlider.addEventListener('change', (e) => {
+    hueSlider.addEventListener('change', e => {
       e.stopPropagation();
-      const stateObj = this._hass.states[this._config.entity];
-      const sat = stateObj?.attributes.hs_color?.[1] ?? 100;
-      this._hass.callService('light', 'turn_on', {
-        entity_id: this._config.entity,
-        hs_color: [+e.target.value, sat],
-      });
+      const sat = this._hass.states[this._cfg.entity]?.attributes.hs_color?.[1] ?? 100;
+      this._call('turn_on', { hs_color: [+e.target.value, sat] });
     });
 
-    this._bindHoldTap(this._el.iconBtn);
+    this._bindHoldTap(iconBtn);
   }
 
-  /* ── Icon tile: tap = toggle, hold = more-info ─────────────── */
+  // ── Hold/tap on icon tile ──────────────────────────────────
 
-  _bindHoldTap(button) {
+  _bindHoldTap(btn) {
     let timer = null;
-    let held = false;
+    let held  = false;
 
     const start = () => {
-      held = false;
-      timer = setTimeout(() => {
-        held = true;
-        timer = null;
-        this._fireMoreInfo();
-      }, this._config.hold_ms);
+      held  = false;
+      timer = setTimeout(() => { held = true; timer = null; this._moreInfo(); }, this._cfg.hold_ms);
     };
+    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
 
-    const cancel = () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    };
-
-    button.addEventListener('mousedown', start);
-    button.addEventListener('touchstart', start, { passive: true });
-    button.addEventListener('mouseup', cancel);
-    button.addEventListener('mouseleave', cancel);
-    button.addEventListener('touchend', cancel);
-    button.addEventListener('touchcancel', cancel);
-
-    button.addEventListener('click', () => {
-      if (held) {
-        held = false;
-        return;
-      }
-      this._toggleLight();
-    });
+    btn.addEventListener('mousedown',   start);
+    btn.addEventListener('touchstart',  start, { passive: true });
+    btn.addEventListener('mouseup',     cancel);
+    btn.addEventListener('mouseleave',  cancel);
+    btn.addEventListener('touchend',    cancel);
+    btn.addEventListener('touchcancel', cancel);
+    btn.addEventListener('click', () => { if (held) { held = false; return; } this._toggle(); });
   }
 
-  /* ── Service calls ─────────────────────────────────────────── */
+  // ── HA service helpers ─────────────────────────────────────
 
-  _toggleLight() {
-    this._hass.callService('light', 'toggle', { entity_id: this._config.entity });
+  _toggle() {
+    this._call('toggle');
   }
 
-  _fireMoreInfo() {
-    this.dispatchEvent(
-      new CustomEvent('hass-more-info', {
-        bubbles: true,
-        composed: true,
-        detail: { entityId: this._config.entity },
-      }),
-    );
+  _call(service, data = {}) {
+    this._hass.callService('light', service, { entity_id: this._cfg.entity, ...data });
   }
 
-  /* ── Helpers ───────────────────────────────────────────────── */
+  _moreInfo() {
+    this.dispatchEvent(new CustomEvent('hass-more-info', {
+      bubbles: true, composed: true, detail: { entityId: this._cfg.entity },
+    }));
+  }
 
-  _stateLabel(stateObj) {
-    if (stateObj.state !== 'on') return 'Off';
-    if (typeof stateObj.attributes.brightness === 'number') {
-      return `${Math.round((stateObj.attributes.brightness / 255) * 100)}%`;
+  // ── State label (HA-localized) ─────────────────────────────
+
+  _stateLabel(state, isOn) {
+    // Show brightness percentage when on and available
+    if (isOn && typeof state.attributes.brightness === 'number') {
+      return `${Math.round((state.attributes.brightness / 255) * 100)}%`;
     }
-    return 'On';
+    // Use HA's built-in entity state formatter (handles translations)
+    if (this._hass.formatEntityState) {
+      return this._hass.formatEntityState(state);
+    }
+    // Fallback: manual localize
+    const key = `component.light.entity_component._.state.${state.state}`;
+    return this._hass.localize?.(key) || state.state;
   }
 }
 
-// ─── Registration ────────────────────────────────────────────
+// ─── Registration ─────────────────────────────────────────────
 
-if (!customElements.get('dados-card')) {
-  customElements.define('dados-card', DadosCard);
-}
+if (!customElements.get('dados-card')) customElements.define('dados-card', DadosCard);
 
-window.customCards = window.customCards || [];
-if (!window.customCards.some((c) => c.type === 'dados-card')) {
+window.customCards ??= [];
+if (!window.customCards.some(c => c.type === 'dados-card')) {
   window.customCards.push({
     type: 'custom:dados-card',
     name: 'Dados Card',
-    description: 'Light card with dynamic RGB color, glow effects, and brightness control.',
+    description: 'Light card with dynamic glow, adaptive height, and smart sliders.',
     preview: true,
   });
 }
