@@ -1,9 +1,8 @@
-const CARD_VERSION = '1.1.0';
+const CARD_VERSION = '1.2.0';
 
 // ─── Defaults ────────────────────────────────────────────────
 
 const DEFAULTS = {
-  compact: true,
   icon_on: 'mdi:lightbulb',
   icon_off: 'mdi:lightbulb-outline',
   hold_ms: 500,
@@ -21,30 +20,48 @@ function rgbCss(rgb) {
   return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
+/** Parse hex or rgb() string → [r,g,b] array, or null for CSS vars etc. */
+function parseColorToRgb(color) {
+  if (!color || typeof color !== 'string') return null;
+  const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  if (hex) {
+    return hex.length === 3
+      ? hex.split('').map((c) => parseInt(c + c, 16))
+      : [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  }
+  const m = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+  if (m) return [+m[1], +m[2], +m[3]];
+  return null; // e.g. var(--yellow) — use as-is in CSS
+}
+
 // ─── Static stylesheet (parsed once, uses CSS custom props) ──
+// Base: 1rem = 16px  │  Card height: 84px = 5.25rem
 
 const STYLES = /* css */ `
   :host { display: block; }
 
   ha-card {
-    border-radius: 36px;
-    padding: 12px;
+    border-radius: 2.25rem;
+    padding: 0.75rem;
+    min-height: 5.25rem;
     box-sizing: border-box;
     overflow: hidden;
     backdrop-filter: blur(20px);
+    background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
 
   .row {
     display: grid;
-    grid-template-columns: 45px 1fr auto;
+    grid-template-columns: 2.8125rem 1fr auto;
     align-items: center;
-    gap: 10px;
+    gap: 0.625rem;
+    min-height: calc(5.25rem - 1.5rem);
   }
 
   .icon-tile {
-    width: 45px;
-    height: 45px;
-    border-radius: 18px;
+    width: 2.8125rem;
+    height: 2.8125rem;
+    border-radius: 1.125rem;
     background: var(--dados-icon-bg);
     box-shadow: var(--dados-icon-glow, none);
     display: flex;
@@ -59,7 +76,7 @@ const STYLES = /* css */ `
   }
 
   .icon-tile ha-icon {
-    --mdc-icon-size: 32px;
+    --mdc-icon-size: 2rem;
     color: var(--dados-icon-color);
     transition: color 0.3s;
   }
@@ -70,73 +87,51 @@ const STYLES = /* css */ `
   }
 
   .name {
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 500;
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--contrast16);
-    letter-spacing: 0.4px;
-    padding-left: 3px;
+    letter-spacing: 0.025rem;
+    padding-left: 0.1875rem;
   }
 
   .state {
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 400;
     color: var(--contrast12, var(--secondary-text-color));
-    letter-spacing: 0.6px;
-    margin-top: 0;
-    padding-left: 3px;
+    letter-spacing: 0.0375rem;
+    padding-left: 0.1875rem;
   }
 
-  /* ── Pill toggle switch ──────────────────────────── */
-
-  .toggle-wrap {
+  .toggle-btn {
+    width: 2.9375rem;
+    height: 2.9375rem;
+    border: none;
+    border-radius: 0.9375rem;
+    background: var(--contrast3, rgba(127, 127, 127, 0.15));
     display: flex;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
+    padding: 0;
     flex-shrink: 0;
+    transition: background 0.2s;
   }
 
-  .toggle-wrap input {
-    display: none;
-  }
-
-  .toggle-track {
-    width: 50px;
-    height: 28px;
-    border-radius: 14px;
-    background: var(--dados-track-off, rgba(120,120,128,0.32));
-    position: relative;
-    transition: background 0.25s;
-  }
-
-  .toggle-wrap input:checked ~ .toggle-track {
-    background: var(--dados-track-on);
-  }
-
-  .toggle-thumb {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
-  }
-
-  .toggle-wrap input:checked ~ .toggle-track .toggle-thumb {
-    transform: translateX(22px);
+  .toggle-btn ha-icon {
+    --mdc-icon-size: 1.875rem;
+    color: var(--dados-toggle-color);
+    transition: color 0.2s;
   }
 
   .controls {
-    margin-top: 12px;
+    margin-top: 0.75rem;
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 12px;
+    gap: 0.75rem;
     align-items: center;
   }
 
@@ -148,10 +143,10 @@ const STYLES = /* css */ `
   }
 
   .collapse-btn {
-    width: 47px;
-    height: 47px;
+    width: 2.9375rem;
+    height: 2.9375rem;
     border: none;
-    border-radius: 15px;
+    border-radius: 0.9375rem;
     background: var(--contrast3, rgba(127, 127, 127, 0.15));
     display: flex;
     align-items: center;
@@ -161,24 +156,84 @@ const STYLES = /* css */ `
   }
 
   .collapse-btn ha-icon {
-    --mdc-icon-size: 24px;
+    --mdc-icon-size: 1.5rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
   .missing {
-    padding: 14px;
+    padding: 0.875rem;
     color: var(--error-color);
   }
 `;
 
+// ─── UI Editor ───────────────────────────────────────────────
+
+const EDITOR_SCHEMA = [
+  { name: 'entity', required: true, selector: { entity: { domain: 'light' } } },
+  { name: 'name', label: 'Name', selector: { text: {} } },
+  { name: 'color', label: 'Farbe (hex, rgb(), var(--x)) — Standard: HA Lichtfarbe', selector: { text: {} } },
+  { name: 'icon_on', label: 'Icon (An)', selector: { icon: {} } },
+  { name: 'icon_off', label: 'Icon (Aus)', selector: { icon: {} } },
+  { name: 'icon_color', label: 'Icon-Farbe wenn an (hex, rgb(), var(--x))', selector: { text: {} } },
+  { name: 'card_background_color', label: 'Kartenhintergrund (hex, rgb(), var(--x))', selector: { text: {} } },
+];
+
+class DadosCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  setConfig(config) {
+    this._config = { ...config };
+    if (this._form) {
+      this._form.data = this._config;
+    } else {
+      this._build();
+    }
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this._form) this._form.hass = hass;
+  }
+
+  _build() {
+    const form = document.createElement('ha-form');
+    form.schema = EDITOR_SCHEMA;
+    form.data = this._config;
+    form.hass = this._hass;
+    form.computeLabel = (s) => s.label ?? s.name;
+    form.addEventListener('value-changed', (e) => {
+      this._config = e.detail.value;
+      this.dispatchEvent(
+        new CustomEvent('config-changed', {
+          detail: { config: this._config },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    });
+    this._form = form;
+    this.shadowRoot.appendChild(form);
+  }
+}
+
+if (!customElements.get('dados-card-editor')) {
+  customElements.define('dados-card-editor', DadosCardEditor);
+}
+
 // ─── Card ────────────────────────────────────────────────────
 
 class DadosCard extends HTMLElement {
+  static getConfigElement() {
+    return document.createElement('dados-card-editor');
+  }
+
   static getStubConfig() {
     return {
       type: 'custom:dados-card',
       entity: 'light.example',
-      compact: true,
       name: 'Dados Light',
     };
   }
@@ -191,7 +246,7 @@ class DadosCard extends HTMLElement {
     }
 
     this._config = { ...DEFAULTS, ...config };
-    this._expanded = !this._config.compact;
+    this._expanded = false; // always starts compact
     this._stateKey = null;
 
     if (!this.shadowRoot) {
@@ -214,6 +269,18 @@ class DadosCard extends HTMLElement {
     return this._expanded ? 4 : 2;
   }
 
+  /** Allows resizing in HA sections dashboard */
+  getLayoutOptions() {
+    return {
+      grid_rows: 1,
+      grid_min_rows: 1,
+      grid_max_rows: 2,
+      grid_columns: 2,
+      grid_min_columns: 1,
+      grid_max_columns: 4,
+    };
+  }
+
   /* ── One-time DOM build ────────────────────────────────────── */
 
   _buildDom() {
@@ -228,10 +295,9 @@ class DadosCard extends HTMLElement {
             <div class="name" id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <label class="toggle-wrap" id="toggleBtn" aria-label="Toggle light">
-            <input type="checkbox" id="toggleInput" />
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </label>
+          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle light">
+            <ha-icon id="toggleIconEl"></ha-icon>
+          </button>
         </div>
         <div class="controls hidden" id="controls">
           <input id="slider" type="range" min="1" max="255" step="1" value="1" aria-label="Brightness" />
@@ -251,7 +317,7 @@ class DadosCard extends HTMLElement {
       nameEl: $('nameEl'),
       stateEl: $('stateEl'),
       toggleBtn: $('toggleBtn'),
-      toggleInput: $('toggleInput'),
+      toggleIconEl: $('toggleIconEl'),
       textBlock: $('textBlock'),
       controls: $('controls'),
       slider: $('slider'),
@@ -278,13 +344,27 @@ class DadosCard extends HTMLElement {
     }
 
     // Dirty check — skip if nothing display-relevant changed
-    const key = `${stateObj.state}|${stateObj.attributes.brightness}|${stateObj.attributes.rgb_color}`;
+    const key = `${stateObj.state}|${stateObj.attributes.brightness}|${stateObj.attributes.rgb_color}|${this._config.color}`;
     if (key === this._stateKey) return;
     this._stateKey = key;
 
     const isOn = stateObj.state === 'on';
-    const rgb = stateObj.attributes.rgb_color;
-    const color = rgb || FALLBACK_RGB;
+
+    // ── Color resolution ────────────────────────────────────────
+    // 1. config.color (user override) → parse hex/rgb or keep CSS string
+    // 2. HA light rgb_color
+    // 3. FALLBACK_RGB
+    let color; // [r,g,b] for rgba() helpers
+    let colorCss; // CSS string for direct property use
+
+    if (this._config.color) {
+      const parsed = parseColorToRgb(this._config.color);
+      color = parsed ?? FALLBACK_RGB;
+      colorCss = this._config.color; // preserve original (var(), hex, etc.)
+    } else {
+      color = stateObj.attributes.rgb_color || FALLBACK_RGB;
+      colorCss = rgbCss(color);
+    }
 
     // Text content
     this._el.nameEl.textContent =
@@ -296,7 +376,10 @@ class DadosCard extends HTMLElement {
       'icon',
       this._config.icon || (isOn ? this._config.icon_on : this._config.icon_off),
     );
-    this._el.toggleInput.checked = isOn;
+    this._el.toggleIconEl.setAttribute(
+      'icon',
+      isOn ? 'mdi:toggle-switch' : 'mdi:toggle-switch-off-outline',
+    );
 
     // Slider value
     const brightness =
@@ -316,11 +399,22 @@ class DadosCard extends HTMLElement {
         ? `-55px -50px 70px 20px ${rgba(color, 0.7)}, -35px -35px 70px 10px ${rgba(color, 0.8)}`
         : 'none',
     );
-    s.setProperty('--dados-icon-color', isOn ? 'var(--contrast2, #fff)' : 'var(--contrast16, #888)');
-    s.setProperty('--dados-track-on', isOn ? rgbCss(color) : 'var(--yellow, #f5b23f)');
-    s.setProperty('--dados-slider-accent', isOn ? rgbCss(color) : 'var(--yellow, #f5b23f)');
+    s.setProperty(
+      '--dados-icon-color',
+      isOn
+        ? (this._config.icon_color || 'var(--contrast2, #fff)')
+        : 'var(--contrast16, #888)',
+    );
+    s.setProperty('--dados-toggle-color', isOn ? colorCss : 'var(--secondary-text-color)');
+    s.setProperty('--dados-slider-accent', isOn ? colorCss : 'var(--yellow, #f5b23f)');
 
-    // Expand / collapse (reflects current UI state)
+    if (this._config.card_background_color) {
+      s.setProperty('--dados-card-bg', this._config.card_background_color);
+    } else {
+      s.removeProperty('--dados-card-bg');
+    }
+
+    // Expand / collapse
     this._el.controls.classList.toggle('hidden', !this._expanded);
   }
 
@@ -333,7 +427,6 @@ class DadosCard extends HTMLElement {
     });
 
     this._el.textBlock.addEventListener('click', () => {
-      if (!this._config.compact) return;
       this._expanded = !this._expanded;
       this._el.controls.classList.toggle('hidden', !this._expanded);
     });
@@ -341,7 +434,7 @@ class DadosCard extends HTMLElement {
     this._el.collapseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this._expanded = false;
-      this._el.controls.classList.toggle('hidden', true);
+      this._el.controls.classList.add('hidden');
     });
 
     this._el.slider.addEventListener('change', (e) => {
@@ -429,7 +522,7 @@ if (!customElements.get('dados-card')) {
 window.customCards = window.customCards || [];
 if (!window.customCards.some((c) => c.type === 'dados-card')) {
   window.customCards.push({
-    type: 'dados-card',
+    type: 'custom:dados-card',
     name: 'Dados Card',
     description: 'Light card with dynamic RGB color, glow effects, and brightness control.',
     preview: true,
