@@ -36,9 +36,9 @@ const STYLES = /* css */ `
 
   .row {
     display: grid;
-    grid-template-columns: 55px 1fr 55px;
-    align-items: start;
-    height: 56px;
+    grid-template-columns: 45px 1fr auto;
+    align-items: center;
+    gap: 10px;
   }
 
   .icon-tile {
@@ -53,9 +53,9 @@ const STYLES = /* css */ `
     cursor: pointer;
     border: none;
     padding: 0;
-    margin-top: 5px;
     overflow: visible;
     transition: background 0.3s, box-shadow 0.3s;
+    flex-shrink: 0;
   }
 
   .icon-tile ha-icon {
@@ -67,7 +67,6 @@ const STYLES = /* css */ `
   .text {
     min-width: 0;
     cursor: pointer;
-    margin-top: 9px;
   }
 
   .name {
@@ -91,25 +90,46 @@ const STYLES = /* css */ `
     padding-left: 3px;
   }
 
-  .toggle-btn {
-    width: 47px;
-    height: 47px;
-    border: none;
-    border-radius: 15px;
-    background: var(--contrast3, rgba(127, 127, 127, 0.15));
+  /* ── Pill toggle switch ──────────────────────────── */
+
+  .toggle-wrap {
     display: flex;
     align-items: center;
-    justify-content: center;
     cursor: pointer;
-    padding: 0;
-    margin-top: 5px;
-    transition: background 0.2s;
+    flex-shrink: 0;
   }
 
-  .toggle-btn ha-icon {
-    --mdc-icon-size: 30px;
-    color: var(--dados-toggle-color);
-    transition: color 0.2s;
+  .toggle-wrap input {
+    display: none;
+  }
+
+  .toggle-track {
+    width: 50px;
+    height: 28px;
+    border-radius: 14px;
+    background: var(--dados-track-off, rgba(120,120,128,0.32));
+    position: relative;
+    transition: background 0.25s;
+  }
+
+  .toggle-wrap input:checked ~ .toggle-track {
+    background: var(--dados-track-on);
+  }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+  }
+
+  .toggle-wrap input:checked ~ .toggle-track .toggle-thumb {
+    transform: translateX(22px);
   }
 
   .controls {
@@ -208,9 +228,10 @@ class DadosCard extends HTMLElement {
             <div class="name" id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle light">
-            <ha-icon id="toggleIconEl"></ha-icon>
-          </button>
+          <label class="toggle-wrap" id="toggleBtn" aria-label="Toggle light">
+            <input type="checkbox" id="toggleInput" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
         </div>
         <div class="controls hidden" id="controls">
           <input id="slider" type="range" min="1" max="255" step="1" value="1" aria-label="Brightness" />
@@ -230,7 +251,7 @@ class DadosCard extends HTMLElement {
       nameEl: $('nameEl'),
       stateEl: $('stateEl'),
       toggleBtn: $('toggleBtn'),
-      toggleIconEl: $('toggleIconEl'),
+      toggleInput: $('toggleInput'),
       textBlock: $('textBlock'),
       controls: $('controls'),
       slider: $('slider'),
@@ -275,10 +296,7 @@ class DadosCard extends HTMLElement {
       'icon',
       this._config.icon || (isOn ? this._config.icon_on : this._config.icon_off),
     );
-    this._el.toggleIconEl.setAttribute(
-      'icon',
-      isOn ? 'mdi:toggle-switch' : 'mdi:toggle-switch-off-outline',
-    );
+    this._el.toggleInput.checked = isOn;
 
     // Slider value
     const brightness =
@@ -299,7 +317,7 @@ class DadosCard extends HTMLElement {
         : 'none',
     );
     s.setProperty('--dados-icon-color', isOn ? 'var(--contrast2, #fff)' : 'var(--contrast16, #888)');
-    s.setProperty('--dados-toggle-color', isOn ? rgba(color, 0.7) : 'var(--secondary-text-color)');
+    s.setProperty('--dados-track-on', isOn ? rgbCss(color) : 'var(--yellow, #f5b23f)');
     s.setProperty('--dados-slider-accent', isOn ? rgbCss(color) : 'var(--yellow, #f5b23f)');
 
     // Expand / collapse (reflects current UI state)
