@@ -1,4 +1,4 @@
-const CARD_VERSION = '1.5.0';
+const CARD_VERSION = '1.6.0';
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -176,6 +176,14 @@ const STYLES = /* css */ `
     align-items: center;
   }
 
+  /* Slider wrapper — clips thumb overflow at pill corners */
+  .slider-wrap {
+    overflow: hidden;
+    border-radius: 1.5625rem;
+    height: 3.125rem;
+    display: block;
+  }
+
   /* Pill slider — shared base */
   .dado-slider {
     -webkit-appearance: none;
@@ -190,7 +198,7 @@ const STYLES = /* css */ `
     padding: 0;
   }
 
-  /* White oval thumb (color-temp & hue) — no shadow */
+  /* White oval thumb (all sliders) — no shadow */
   .dado-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 1.125rem;
@@ -215,39 +223,29 @@ const STYLES = /* css */ `
     border: none;
   }
 
-  /* ── Brightness slider: progress-bar style, thin dark thumb ── */
+  /* ── Brightness slider: progress-bar style, white oval thumb ── */
   .brightness-slider {
     background: var(--_bright-bg, rgba(127,127,127,0.3));
   }
   .brightness-slider::-moz-range-track {
     background: var(--_bright-bg, rgba(127,127,127,0.3));
   }
-  .brightness-slider::-webkit-slider-thumb {
-    width: 0.375rem;
-    height: 2.625rem;
-    border-radius: 0.1875rem;
-    background: rgba(0,0,0,0.5);
-    box-shadow: none;
-    cursor: pointer;
-  }
-  .brightness-slider::-moz-range-thumb {
-    width: 0.375rem;
-    height: 2.625rem;
-    border-radius: 0.1875rem;
-    background: rgba(0,0,0,0.5);
-    box-shadow: none;
-    border: none;
-    cursor: pointer;
-  }
 
   /* ── Color-temp slider: fixed cool→warm gradient ── */
-  .colortemp-slider,
+  .colortemp-slider {
+    background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
+  }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
   }
 
   /* ── Hue slider: rainbow ── */
-  .hue-slider,
+  .hue-slider {
+    background: linear-gradient(to right,
+      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
+      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
+      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+  }
   .hue-slider::-moz-range-track {
     background: linear-gradient(to right,
       hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
@@ -285,11 +283,13 @@ const EDITOR_SCHEMA = [
   {
     type: 'expandable', title: 'Farben',
     schema: [
-      { name: 'color',                label: 'Farbe — Glow + Img Cell (Standard: Lichtfarbe)', selector: { text: {} } },
-      { name: 'toggle_color',         label: 'Toggle Color',                                   selector: { text: {} } },
-      { name: 'icon_color',           label: 'Icon-Farbe wenn an',                             selector: { text: {} } },
-      { name: 'brightness_color',     label: 'Brightness Slider Farbe',                        selector: { text: {} } },
-      { name: 'card_background_color',label: 'Kartenhintergrund',                              selector: { text: {} } },
+      { name: 'color',                label: 'Farbe — Img Cell (Standard: Lichtfarbe)',         selector: { text: {} } },
+      { name: 'glow_color',           label: 'Glow-Farbe (Standard: Lichtfarbe)',               selector: { text: {} } },
+      { name: 'toggle_color',         label: 'Toggle Color',                                    selector: { text: {} } },
+      { name: 'icon_color',           label: 'Icon-Farbe wenn an',                              selector: { text: {} } },
+      { name: 'icon_color_off',       label: 'Icon-Farbe wenn aus',                             selector: { text: {} } },
+      { name: 'brightness_color',     label: 'Brightness Slider Farbe',                         selector: { text: {} } },
+      { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
     ],
   },
   {
@@ -386,7 +386,7 @@ class DadosCard extends HTMLElement {
   getCardSize() { return this._expanded ? 4 : 2; }
 
   getLayoutOptions() {
-    return { grid_rows: 1, grid_min_rows: 1, grid_max_rows: 2, grid_columns: 2, grid_min_columns: 1, grid_max_columns: 4 };
+    return { grid_rows: 1, grid_min_rows: 1, grid_columns: 2, grid_min_columns: 1 };
   }
 
   // ── DOM build (once) ───────────────────────────────────────
@@ -409,22 +409,28 @@ class DadosCard extends HTMLElement {
         </div>
         <div class="controls hidden" id="controls">
           <div class="slider-row" id="brightRow">
-            <input class="dado-slider brightness-slider" id="brightSlider"
-                   type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
+            <div class="slider-wrap">
+              <input class="dado-slider brightness-slider" id="brightSlider"
+                     type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
+            </div>
             <button class="ctrl-btn" tabindex="-1">
               <ha-icon icon="mdi:brightness-percent"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="ctRow">
-            <input class="dado-slider colortemp-slider" id="ctSlider"
-                   type="range" step="1" aria-label="Farbtemperatur"/>
+            <div class="slider-wrap">
+              <input class="dado-slider colortemp-slider" id="ctSlider"
+                     type="range" step="1" aria-label="Farbtemperatur"/>
+            </div>
             <button class="ctrl-btn" tabindex="-1">
               <ha-icon icon="mdi:thermometer"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="hueRow">
-            <input class="dado-slider hue-slider" id="hueSlider"
-                   type="range" min="0" max="360" step="1" aria-label="Farbe"/>
+            <div class="slider-wrap">
+              <input class="dado-slider hue-slider" id="hueSlider"
+                     type="range" min="0" max="360" step="1" aria-label="Farbe"/>
+            </div>
             <button class="ctrl-btn" tabindex="-1">
               <ha-icon icon="mdi:palette"></ha-icon>
             </button>
@@ -489,18 +495,22 @@ class DadosCard extends HTMLElement {
 
     // ── Color resolution ───────────────────────────────────
     //
-    // Priority for Glow + Img Cell:
-    //   1. config.color  (user override)
-    //   2. HA light's rgb_color
-    //   3. HA light's color_temp → converted to RGB
-    //   4. FALLBACK_RGB  [255,218,120]  (≈ --state-light-on-color)
+    // Priority for Img Cell:
+    //   1. config.color  (user override, hex/rgb or CSS var)
+    //   2. HA light's rgb_color / color_temp → converted to RGB
+    //   3. FALLBACK_RGB  [255,218,120]  (≈ --state-light-on-color)
+    //
+    // Priority for Glow (independent — CSS vars unsupported in box-shadow rgba()):
+    //   1. config.glow_color  (hex/rgb)
+    //   2. HA light's rgb_color / color_temp → converted to RGB
+    //   3. FALLBACK_RGB
     //
     // Toggle colour is independent: config.toggle_color → HA rgb_color → FALLBACK_RGB
 
     const lightRgb   = haLightRgb(state);   // may be null if no color info
     const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
-    // effectiveRgb is used wherever we need an [r,g,b] array (glow, brightness gradient)
+    // effectiveRgb: used for brightness gradient fallback
     const effectiveRgb = cfgRgb ?? lightRgb ?? FALLBACK_RGB;
     this._effectiveRgb = effectiveRgb;       // stored for real-time brightness updates
 
@@ -508,6 +518,10 @@ class DadosCard extends HTMLElement {
     const cellBg = isOn
       ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 0.7))
       : 'var(--contrast3, rgba(127,127,127,0.15))';
+
+    // Glow color — separate priority chain (hex/rgb only; CSS vars can't be used in box-shadow rgba())
+    const cfgGlowRgb = parseRgb(this._cfg.glow_color);
+    const glowRgb    = cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB;
 
     // Toggle colour
     const toggleCss = isOn
@@ -520,8 +534,10 @@ class DadosCard extends HTMLElement {
     this._el.stateEl.textContent = this._stateLabel(state, isOn);
 
     // ── Icons ──────────────────────────────────────────────
-    this._el.iconEl.setAttribute('icon',
-      this._cfg.icon || (isOn ? this._cfg.icon_on : this._cfg.icon_off));
+    // Explicit fallback to DEFAULTS so empty string still renders an icon
+    const iconOn  = this._cfg.icon_on  || DEFAULTS.icon_on;
+    const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
+    this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
     this._el.toggleIconEl.setAttribute('icon',
       isOn ? this._cfg.toggle_icon_on : this._cfg.toggle_icon_off);
 
@@ -547,11 +563,11 @@ class DadosCard extends HTMLElement {
 
     s.setProperty('--dados-cell-bg',    cellBg);
     s.setProperty('--dados-glow',       (isOn && this._cfg.glow !== false)
-      ? `-55px -50px 70px 20px ${rgba(effectiveRgb, 0.7)}, -35px -35px 70px 10px ${rgba(effectiveRgb, 0.8)}`
+      ? `-55px -50px 70px 20px ${rgba(glowRgb, 0.7)}, -35px -35px 70px 10px ${rgba(glowRgb, 0.8)}`
       : 'none');
     s.setProperty('--dados-icon-color', isOn
-      ? (this._cfg.icon_color || 'var(--contrast2, #fff)')
-      : 'var(--contrast16, #888)');
+      ? (this._cfg.icon_color     || 'var(--contrast2, #fff)')
+      : (this._cfg.icon_color_off || 'var(--contrast16, #888)'));
     s.setProperty('--dados-toggle-color', toggleCss);
 
     // Font sizes
@@ -573,11 +589,17 @@ class DadosCard extends HTMLElement {
 
   /** Updates the progress-bar background of the brightness slider in real time. */
   _setBrightnessProgress(value) {
-    const rgb      = this._effectiveRgb;
-    const pct      = Math.round((value / 255) * 100);
-    const progCss  = this._cfg.brightness_color || rgbCss(rgb);
-    const trackRgb = rgb.map(c => Math.round(c * 0.35));
+    const pct = Math.round((value / 255) * 100);
+
+    // Progress & track both derive from brightness_color config → fallback to effectiveRgb
+    const cfgBrightRgb = parseRgb(this._cfg.brightness_color);
+    const baseRgb  = cfgBrightRgb ?? this._effectiveRgb;
+    const progCss  = (this._cfg.brightness_color && !cfgBrightRgb)
+      ? this._cfg.brightness_color   // CSS var passthrough for progress
+      : rgbCss(baseRgb);
+    const trackRgb = baseRgb.map(c => Math.round(c * 0.35));
     const trackCss = rgbCss(trackRgb);
+
     // CSS var on the slider element → picked up by both Webkit and Firefox rules
     this._el.brightSlider.style.setProperty('--_bright-bg',
       `linear-gradient(to right, ${progCss} ${pct}%, ${trackCss} ${pct}%)`);
