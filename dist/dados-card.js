@@ -19,7 +19,11 @@ class DadosCard extends HTMLElement {
     };
 
     this._expanded = !this._config.compact;
-    this._attachShadowRoot();
+
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: 'open' });
+    }
+
     this._render();
   }
 
@@ -30,12 +34,6 @@ class DadosCard extends HTMLElement {
 
   getCardSize() {
     return this._expanded ? 4 : 2;
-  }
-
-  _attachShadowRoot() {
-    if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
-    }
   }
 
   _render() {
@@ -53,11 +51,51 @@ class DadosCard extends HTMLElement {
       return;
     }
 
-    const friendlyName = this._config.name || stateObj.attributes.friendly_name || this._config.entity;
-    const icon = this._config.icon || stateObj.attributes.icon || 'mdi:lightbulb';
     const isOn = stateObj.state === 'on';
+    const friendlyName =
+      this._config.name || stateObj.attributes.friendly_name || this._config.entity;
+
+    // State-based icon (matches dados_light template icon_on / icon_off)
+    const icon = this._config.icon || (isOn ? 'mdi:lightbulb' : 'mdi:lightbulb-outline');
+
     const stateLabel = this._stateLabel(stateObj);
-    const brightness = typeof stateObj.attributes.brightness === 'number' ? stateObj.attributes.brightness : 0;
+    const brightness =
+      typeof stateObj.attributes.brightness === 'number' ? stateObj.attributes.brightness : 0;
+
+    // Dynamic RGB color from entity (like dados_base / dados_light templates)
+    const rgb = stateObj.attributes.rgb_color; // [r, g, b] or undefined
+
+    // Icon tile background: rgb tint when on, neutral when off (matches dados_light img_cell style)
+    const iconBg = isOn
+      ? rgb
+        ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.7)`
+        : 'var(--yellow, #f5b23f)'
+      : 'var(--contrast3, rgba(127, 127, 127, 0.15))';
+
+    // Glow effect (matches dados_base box-shadow template logic)
+    const glowColor1 = rgb
+      ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.7)`
+      : 'rgba(245, 178, 63, 0.7)';
+    const glowColor2 = rgb
+      ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.8)`
+      : 'rgba(245, 178, 63, 0.8)';
+    const iconGlow = isOn
+      ? `-55px -50px 70px 20px ${glowColor1}, -35px -35px 70px 10px ${glowColor2}`
+      : 'none';
+
+    // Icon color: white on colored tile when on, muted when off (matches template)
+    const iconColor = isOn ? 'var(--contrast2, #fff)' : 'var(--contrast16, #888)';
+
+    // Toggle icon color: uses rgb_color when on (matches dados_toggle template)
+    const toggleColor = isOn
+      ? rgb
+        ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.7)`
+        : 'var(--yellow, #f5b23f)'
+      : 'var(--secondary-text-color)';
+
+    // Slider accent color
+    const sliderAccent =
+      isOn && rgb ? `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})` : 'var(--yellow, #f5b23f)';
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -66,56 +104,101 @@ class DadosCard extends HTMLElement {
         }
 
         ha-card {
-          border-radius: 20px;
-          padding: 14px;
+          /* Matches dados_base: 36px radius, 12px padding, glass blur */
+          border-radius: 36px;
+          padding: 12px;
           box-sizing: border-box;
+          overflow: hidden;
+          backdrop-filter: blur(20px);
         }
 
         .row {
+          /* Matches dados_light grid: 55px icon | 1fr text | 55px toggle */
           display: grid;
-          grid-template-columns: 56px 1fr 56px;
-          gap: 12px;
-          align-items: center;
+          grid-template-columns: 55px 1fr 55px;
+          align-items: start;
+          height: 56px;
         }
 
-        .icon-btn,
-        .toggle-btn,
-        .expand-btn {
-          width: 56px;
-          height: 56px;
-          border: none;
-          border-radius: 16px;
-          background: rgba(127, 127, 127, 0.12);
-          color: var(--primary-text-color);
+        /* Icon tile — matches dados_base img_cell */
+        .icon-tile {
+          width: 45px;
+          height: 45px;
+          border-radius: 18px;
+          background: ${iconBg};
+          box-shadow: ${iconGlow};
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          border: none;
+          padding: 0;
+          margin-top: 5px;
+          flex-shrink: 0;
+          overflow: visible;
+          transition: background 0.3s, box-shadow 0.3s;
         }
 
-        .icon-btn.on {
-          color: #f5b23f;
+        .icon-tile ha-icon {
+          --mdc-icon-size: 32px;
+          color: ${iconColor};
+          transition: color 0.3s;
         }
 
+        /* Name + state text area */
         .text {
           min-width: 0;
           cursor: pointer;
+          margin-top: 9px;
         }
 
+        /* Matches dados_base name style */
         .name {
-          font-size: 1rem;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 500;
           line-height: 1.2;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          color: var(--contrast16);
+          letter-spacing: 0.4px;
+          padding-left: 3px;
         }
 
+        /* Matches dados_base state style */
         .state {
-          font-size: 0.9rem;
-          color: var(--secondary-text-color);
+          font-size: 14px;
+          font-weight: 400;
+          color: var(--contrast12, var(--secondary-text-color));
+          letter-spacing: 0.6px;
+          margin-top: 0;
+          padding-left: 3px;
         }
 
+        /* Toggle button — matches dados_toggle: 47x47, 15px radius, contrast3 bg */
+        .toggle-btn {
+          width: 47px;
+          height: 47px;
+          border: none;
+          border-radius: 15px;
+          background: var(--contrast3, rgba(127, 127, 127, 0.15));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          padding: 0;
+          margin-top: 5px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+
+        .toggle-btn ha-icon {
+          --mdc-icon-size: 30px;
+          color: ${toggleColor};
+          transition: color 0.2s;
+        }
+
+        /* Expanded brightness controls */
         .controls {
           margin-top: 12px;
           display: grid;
@@ -130,6 +213,25 @@ class DadosCard extends HTMLElement {
 
         input[type='range'] {
           width: 100%;
+          accent-color: ${sliderAccent};
+        }
+
+        .collapse-btn {
+          width: 47px;
+          height: 47px;
+          border: none;
+          border-radius: 15px;
+          background: var(--contrast3, rgba(127, 127, 127, 0.15));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .collapse-btn ha-icon {
+          --mdc-icon-size: 24px;
+          color: var(--contrast12, var(--secondary-text-color));
         }
 
         .missing {
@@ -139,21 +241,25 @@ class DadosCard extends HTMLElement {
       </style>
 
       <ha-card>
-        <div class="row" id="mainRow">
-          <button class="icon-btn ${isOn ? 'on' : ''}" id="iconBtn" aria-label="Show more info">
+        <div class="row">
+          <!-- Icon tile: tap = toggle, hold = more-info (matches dados_light icon_tap_action) -->
+          <button class="icon-tile" id="iconBtn" aria-label="Toggle light">
             <ha-icon icon="${icon}"></ha-icon>
           </button>
 
+          <!-- Text: tap to expand / collapse brightness controls -->
           <div class="text" id="textBlock" aria-label="Toggle card expansion">
             <div class="name">${friendlyName}</div>
             <div class="state">${stateLabel}</div>
           </div>
 
+          <!-- Toggle button (matches dados_toggle template) -->
           <button class="toggle-btn" id="toggleBtn" aria-label="Toggle light">
             <ha-icon icon="mdi:toggle-switch${isOn ? '' : '-off-outline'}"></ha-icon>
           </button>
         </div>
 
+        <!-- Brightness slider (only visible when expanded) -->
         <div class="controls ${this._expanded ? '' : 'hidden'}" id="controls">
           <input
             id="brightnessSlider"
@@ -164,7 +270,7 @@ class DadosCard extends HTMLElement {
             value="${Math.max(1, brightness)}"
             aria-label="Brightness"
           />
-          <button class="expand-btn" id="collapseBtn" aria-label="Collapse card">
+          <button class="collapse-btn" id="collapseBtn" aria-label="Collapse">
             <ha-icon icon="mdi:chevron-up"></ha-icon>
           </button>
         </div>
@@ -175,13 +281,13 @@ class DadosCard extends HTMLElement {
   }
 
   _bindEvents() {
-    this.shadowRoot.getElementById('toggleBtn')?.addEventListener('click', (event) => {
-      event.stopPropagation();
-      this._hass.callService('light', 'toggle', {
-        entity_id: this._config.entity,
-      });
+    // Toggle button: tap to toggle light
+    this.shadowRoot.getElementById('toggleBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._callLightToggle();
     });
 
+    // Text area: tap to expand / collapse (compact mode only)
     this.shadowRoot.getElementById('textBlock')?.addEventListener('click', () => {
       if (!this._config.compact) {
         return;
@@ -190,25 +296,36 @@ class DadosCard extends HTMLElement {
       this._render();
     });
 
-    this.shadowRoot.getElementById('collapseBtn')?.addEventListener('click', (event) => {
-      event.stopPropagation();
+    // Collapse button
+    this.shadowRoot.getElementById('collapseBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       this._expanded = false;
       this._render();
     });
 
-    this.shadowRoot.getElementById('brightnessSlider')?.addEventListener('change', (event) => {
-      event.stopPropagation();
-      const value = Number(event.target.value);
+    // Brightness slider: call light.turn_on with new brightness value
+    this.shadowRoot.getElementById('brightnessSlider')?.addEventListener('change', (e) => {
+      e.stopPropagation();
       this._hass.callService('light', 'turn_on', {
         entity_id: this._config.entity,
-        brightness: value,
+        brightness: Number(e.target.value),
       });
     });
 
-    this._bindHoldForMoreInfo(this.shadowRoot.getElementById('iconBtn'));
+    // Icon tile: tap = toggle, hold (500 ms) = more-info
+    this._bindIconButton(this.shadowRoot.getElementById('iconBtn'));
   }
 
-  _bindHoldForMoreInfo(button) {
+  _callLightToggle() {
+    this._hass.callService('light', 'toggle', { entity_id: this._config.entity });
+  }
+
+  /**
+   * Binds the icon tile button:
+   *  - Short tap  → toggle light  (matches dados_light icon_tap_action: toggle)
+   *  - Hold 500ms → open more-info dialog
+   */
+  _bindIconButton(button) {
     if (!button) {
       return;
     }
@@ -216,59 +333,58 @@ class DadosCard extends HTMLElement {
     let holdTimer = null;
     let holdTriggered = false;
 
-    const start = () => {
+    const onStart = () => {
       holdTriggered = false;
       holdTimer = window.setTimeout(() => {
         holdTriggered = true;
-        this._fireEvent('hass-more-info', {
-          entityId: this._config.entity,
-        });
+        holdTimer = null;
+        this._fireMoreInfo();
       }, 500);
     };
 
-    const end = () => {
+    const onEnd = () => {
       if (holdTimer !== null) {
         window.clearTimeout(holdTimer);
         holdTimer = null;
       }
     };
 
-    button.addEventListener('mousedown', start);
-    button.addEventListener('touchstart', start, { passive: true });
-    button.addEventListener('mouseup', end);
-    button.addEventListener('mouseleave', end);
-    button.addEventListener('touchend', end);
-    button.addEventListener('touchcancel', end);
-    button.addEventListener('click', (event) => {
+    button.addEventListener('mousedown', onStart);
+    button.addEventListener('touchstart', onStart, { passive: true });
+    button.addEventListener('mouseup', onEnd);
+    button.addEventListener('mouseleave', onEnd);
+    button.addEventListener('touchend', onEnd);
+    button.addEventListener('touchcancel', onEnd);
+
+    button.addEventListener('click', () => {
       if (holdTriggered) {
-        event.preventDefault();
+        // Hold already fired more-info — don't also toggle
+        holdTriggered = false;
+        return;
       }
+      this._callLightToggle();
     });
+  }
+
+  /** Fires the HA more-info dialog for this card's entity */
+  _fireMoreInfo() {
+    // Use CustomEvent so .detail is properly set (plain Event does not support detail)
+    const event = new CustomEvent('hass-more-info', {
+      bubbles: true,
+      composed: true,
+      detail: { entityId: this._config.entity },
+    });
+    this.dispatchEvent(event);
   }
 
   _stateLabel(stateObj) {
     if (stateObj.state !== 'on') {
       return 'Off';
     }
-
     if (typeof stateObj.attributes.brightness === 'number') {
-      const percent = Math.round((stateObj.attributes.brightness / 255) * 100);
-      return `${percent}%`;
+      return `${Math.round((stateObj.attributes.brightness / 255) * 100)}%`;
     }
-
     return 'On';
-  }
-
-  _fireEvent(type, detail = {}, options = {}) {
-    const event = new Event(type, {
-      bubbles: options.bubbles ?? true,
-      cancelable: Boolean(options.cancelable),
-      composed: options.composed ?? true,
-    });
-
-    event.detail = detail;
-    this.dispatchEvent(event);
-    return event;
   }
 }
 
@@ -277,11 +393,11 @@ if (!customElements.get('dados-card')) {
 }
 
 window.customCards = window.customCards || [];
-const cardAlreadyRegistered = window.customCards.some((card) => card.type === 'dados-card');
-if (!cardAlreadyRegistered) {
+if (!window.customCards.some((c) => c.type === 'dados-card')) {
   window.customCards.push({
     type: 'dados-card',
     name: 'Dados Card',
-    description: 'Stable first version of a light-focused Dados-style Home Assistant card.',
+    description: 'Light card with dynamic RGB color, glow effects, and brightness control.',
+    preview: true,
   });
 }
