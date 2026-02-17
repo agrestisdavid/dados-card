@@ -1,11 +1,14 @@
-const CARD_VERSION = '1.2.0';
+const CARD_VERSION = '1.3.0';
 
 // ─── Defaults ────────────────────────────────────────────────
 
 const DEFAULTS = {
   icon_on: 'mdi:lightbulb',
   icon_off: 'mdi:lightbulb-outline',
+  toggle_icon_on: 'mdi:toggle-switch',
+  toggle_icon_off: 'mdi:toggle-switch-off-outline',
   hold_ms: 500,
+  glow: true,
 };
 
 const FALLBACK_RGB = [245, 178, 63];
@@ -20,7 +23,7 @@ function rgbCss(rgb) {
   return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
-/** Parse hex or rgb() string → [r,g,b] array, or null for CSS vars etc. */
+/** Parse hex or rgb() string → [r,g,b] array, or null for CSS vars / unknowns. */
 function parseColorToRgb(color) {
   if (!color || typeof color !== 'string') return null;
   const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
@@ -31,19 +34,30 @@ function parseColorToRgb(color) {
   }
   const m = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
   if (m) return [+m[1], +m[2], +m[3]];
-  return null; // e.g. var(--yellow) — use as-is in CSS
+  return null; // e.g. var(--yellow) — pass through as CSS string
+}
+
+/**
+ * Resolve a color config value to an [r,g,b] array.
+ * Falls back to `fallback` (already an array) if the value can't be parsed.
+ */
+function resolveRgb(configValue, fallback) {
+  if (!configValue) return fallback;
+  return parseColorToRgb(configValue) ?? fallback;
 }
 
 // ─── Static stylesheet (parsed once, uses CSS custom props) ──
-// Base: 1rem = 16px  │  Card height: 84px = 5.25rem
+// Base: 1rem = 16px
+// Card height: 2×1.25rem padding + 2.8125rem icon = 5.3125rem ≈ 85px
+// → equal spacing on all four sides (1.25rem = 20px)
 
 const STYLES = /* css */ `
   :host { display: block; }
 
   ha-card {
     border-radius: 2.25rem;
-    padding: 0.75rem;
-    min-height: 5.25rem;
+    padding: 1.25rem;
+    min-height: calc(2.8125rem + 2.5rem);
     box-sizing: border-box;
     overflow: hidden;
     backdrop-filter: blur(20px);
@@ -55,14 +69,14 @@ const STYLES = /* css */ `
     grid-template-columns: 2.8125rem 1fr auto;
     align-items: center;
     gap: 0.625rem;
-    min-height: calc(5.25rem - 1.5rem);
+    min-height: 2.8125rem;
   }
 
   .icon-tile {
     width: 2.8125rem;
     height: 2.8125rem;
     border-radius: 1.125rem;
-    background: var(--dados-icon-bg);
+    background: var(--dados-cell-bg);
     box-shadow: var(--dados-icon-glow, none);
     display: flex;
     align-items: center;
@@ -87,7 +101,7 @@ const STYLES = /* css */ `
   }
 
   .name {
-    font-size: 1rem;
+    font-size: var(--dados-name-fs, 1rem);
     font-weight: 500;
     line-height: 1.2;
     overflow: hidden;
@@ -99,7 +113,7 @@ const STYLES = /* css */ `
   }
 
   .state {
-    font-size: 0.875rem;
+    font-size: var(--dados-state-fs, 0.875rem);
     font-weight: 400;
     color: var(--contrast12, var(--secondary-text-color));
     letter-spacing: 0.0375rem;
@@ -171,11 +185,57 @@ const STYLES = /* css */ `
 const EDITOR_SCHEMA = [
   { name: 'entity', required: true, selector: { entity: { domain: 'light' } } },
   { name: 'name', label: 'Name', selector: { text: {} } },
-  { name: 'color', label: 'Farbe (hex, rgb(), var(--x)) — Standard: HA Lichtfarbe', selector: { text: {} } },
-  { name: 'icon_on', label: 'Icon (An)', selector: { icon: {} } },
-  { name: 'icon_off', label: 'Icon (Aus)', selector: { icon: {} } },
-  { name: 'icon_color', label: 'Icon-Farbe wenn an (hex, rgb(), var(--x))', selector: { text: {} } },
-  { name: 'card_background_color', label: 'Kartenhintergrund (hex, rgb(), var(--x))', selector: { text: {} } },
+  {
+    type: 'expandable',
+    title: 'Farben',
+    schema: [
+      {
+        name: 'color',
+        label: 'Farbe — Glow + Img Cell (Standard: HA Lichtfarbe)',
+        selector: { text: {} },
+      },
+      {
+        name: 'cell_color',
+        label: 'Img Cell Farbe (überschreibt Farbe für Cell)',
+        selector: { text: {} },
+      },
+      {
+        name: 'glow_color',
+        label: 'Glow Farbe (überschreibt Farbe für Glow)',
+        selector: { text: {} },
+      },
+      { name: 'toggle_color', label: 'Toggle Color', selector: { text: {} } },
+      { name: 'icon_color', label: 'Icon-Farbe wenn an', selector: { text: {} } },
+      { name: 'card_background_color', label: 'Kartenhintergrund', selector: { text: {} } },
+    ],
+  },
+  {
+    type: 'expandable',
+    title: 'Icons',
+    schema: [
+      { name: 'icon_on', label: 'Icon (An)', selector: { icon: {} } },
+      { name: 'icon_off', label: 'Icon (Aus)', selector: { icon: {} } },
+      { name: 'toggle_icon_on', label: 'Toggle Icon (An)', selector: { icon: {} } },
+      { name: 'toggle_icon_off', label: 'Toggle Icon (Aus)', selector: { icon: {} } },
+    ],
+  },
+  {
+    type: 'expandable',
+    title: 'Schrift & Effekte',
+    schema: [
+      {
+        name: 'name_font_size',
+        label: 'Name Schriftgröße (z.B. 1rem, 16px)',
+        selector: { text: {} },
+      },
+      {
+        name: 'state_font_size',
+        label: 'State Schriftgröße (z.B. 0.875rem, 14px)',
+        selector: { text: {} },
+      },
+      { name: 'glow', label: 'Glow-Effekt', selector: { boolean: {} } },
+    ],
+  },
 ];
 
 class DadosCardEditor extends HTMLElement {
@@ -246,8 +306,8 @@ class DadosCard extends HTMLElement {
     }
 
     this._config = { ...DEFAULTS, ...config };
-    this._expanded = false; // always starts compact
-    this._stateKey = null;
+    this._expanded = false;
+    this._stateKey = null; // reset so next _update() runs fully
 
     if (!this.shadowRoot) {
       this.attachShadow({ mode: 'open' });
@@ -269,7 +329,6 @@ class DadosCard extends HTMLElement {
     return this._expanded ? 4 : 2;
   }
 
-  /** Allows resizing in HA sections dashboard */
   getLayoutOptions() {
     return {
       grid_rows: 1,
@@ -327,7 +386,7 @@ class DadosCard extends HTMLElement {
     this._bindEvents();
   }
 
-  /* ── Targeted DOM updates (no innerHTML, no rebind) ────────── */
+  /* ── Targeted DOM updates ──────────────────────────────────── */
 
   _update() {
     if (!this._hass || !this._el) return;
@@ -343,42 +402,52 @@ class DadosCard extends HTMLElement {
       return;
     }
 
-    // Dirty check — skip if nothing display-relevant changed
-    const key = `${stateObj.state}|${stateObj.attributes.brightness}|${stateObj.attributes.rgb_color}|${this._config.color}`;
+    // Dirty check — only state values, not config (config changes reset _stateKey via setConfig)
+    const key = `${stateObj.state}|${stateObj.attributes.brightness}|${stateObj.attributes.rgb_color}`;
     if (key === this._stateKey) return;
     this._stateKey = key;
 
     const isOn = stateObj.state === 'on';
 
     // ── Color resolution ────────────────────────────────────────
-    // 1. config.color (user override) → parse hex/rgb or keep CSS string
-    // 2. HA light rgb_color
-    // 3. FALLBACK_RGB
-    let color; // [r,g,b] for rgba() helpers
-    let colorCss; // CSS string for direct property use
+    //
+    // `color`      → base override for both glow & cell (beats HA rgb_color)
+    // `cell_color` → further overrides cell only
+    // `glow_color` → further overrides glow only
+    // `toggle_color` → completely separate; never touches glow/cell
+    //
+    // Bug fix: color no longer bleeds into toggle — toggle has its own prop.
 
-    if (this._config.color) {
-      const parsed = parseColorToRgb(this._config.color);
-      color = parsed ?? FALLBACK_RGB;
-      colorCss = this._config.color; // preserve original (var(), hex, etc.)
-    } else {
-      color = stateObj.attributes.rgb_color || FALLBACK_RGB;
-      colorCss = rgbCss(color);
-    }
+    const haRgb = stateObj.attributes.rgb_color || FALLBACK_RGB;
 
-    // Text content
+    // Base: config.color → HA rgb_color → FALLBACK_RGB
+    const baseRgb = resolveRgb(this._config.color, haRgb);
+
+    // Cell (img cell background)
+    const cellRgb = resolveRgb(this._config.cell_color, baseRgb);
+
+    // Glow
+    const glowRgb = resolveRgb(this._config.glow_color, baseRgb);
+
+    // Toggle color: config.toggle_color → base color as CSS string → HA rgb_color
+    const toggleColorCss = this._config.toggle_color || this._config.color || rgbCss(haRgb);
+
+    // Slider accent: follow base color
+    const sliderAccentCss = this._config.color || rgbCss(haRgb);
+
+    // Text
     this._el.nameEl.textContent =
       this._config.name || stateObj.attributes.friendly_name || this._config.entity;
     this._el.stateEl.textContent = this._stateLabel(stateObj);
 
-    // Icon attributes
+    // Icons
     this._el.iconEl.setAttribute(
       'icon',
       this._config.icon || (isOn ? this._config.icon_on : this._config.icon_off),
     );
     this._el.toggleIconEl.setAttribute(
       'icon',
-      isOn ? 'mdi:toggle-switch' : 'mdi:toggle-switch-off-outline',
+      isOn ? this._config.toggle_icon_on : this._config.toggle_icon_off,
     );
 
     // Slider value
@@ -386,28 +455,40 @@ class DadosCard extends HTMLElement {
       typeof stateObj.attributes.brightness === 'number' ? stateObj.attributes.brightness : 0;
     this._el.slider.value = Math.max(1, brightness);
 
-    // CSS custom properties (dynamic colors — no stylesheet re-parse)
+    // CSS custom properties
     const s = this._el.card.style;
+    const glowOn = isOn && this._config.glow !== false;
 
     s.setProperty(
-      '--dados-icon-bg',
-      isOn ? rgba(color, 0.7) : 'var(--contrast3, rgba(127,127,127,0.15))',
+      '--dados-cell-bg',
+      isOn ? rgba(cellRgb, 0.7) : 'var(--contrast3, rgba(127,127,127,0.15))',
     );
     s.setProperty(
       '--dados-icon-glow',
-      isOn
-        ? `-55px -50px 70px 20px ${rgba(color, 0.7)}, -35px -35px 70px 10px ${rgba(color, 0.8)}`
+      glowOn
+        ? `-55px -50px 70px 20px ${rgba(glowRgb, 0.7)}, -35px -35px 70px 10px ${rgba(glowRgb, 0.8)}`
         : 'none',
     );
     s.setProperty(
       '--dados-icon-color',
-      isOn
-        ? (this._config.icon_color || 'var(--contrast2, #fff)')
-        : 'var(--contrast16, #888)',
+      isOn ? (this._config.icon_color || 'var(--contrast2, #fff)') : 'var(--contrast16, #888)',
     );
-    s.setProperty('--dados-toggle-color', isOn ? colorCss : 'var(--secondary-text-color)');
-    s.setProperty('--dados-slider-accent', isOn ? colorCss : 'var(--yellow, #f5b23f)');
+    s.setProperty('--dados-toggle-color', isOn ? toggleColorCss : 'var(--secondary-text-color)');
+    s.setProperty('--dados-slider-accent', isOn ? sliderAccentCss : 'var(--yellow, #f5b23f)');
 
+    // Font sizes
+    if (this._config.name_font_size) {
+      s.setProperty('--dados-name-fs', this._config.name_font_size);
+    } else {
+      s.removeProperty('--dados-name-fs');
+    }
+    if (this._config.state_font_size) {
+      s.setProperty('--dados-state-fs', this._config.state_font_size);
+    } else {
+      s.removeProperty('--dados-state-fs');
+    }
+
+    // Card background
     if (this._config.card_background_color) {
       s.setProperty('--dados-card-bg', this._config.card_background_color);
     } else {
