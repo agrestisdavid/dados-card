@@ -124,7 +124,7 @@ const STYLES = /* css */ `
   .name {
     font-size: var(--dados-name-fs, 1rem);
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1.15;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -136,6 +136,8 @@ const STYLES = /* css */ `
   .state {
     font-size: var(--dados-state-fs, 0.875rem);
     font-weight: 400;
+    line-height: 1.15;
+    margin-top: -0.0625rem;
     color: var(--dados-state-color, var(--contrast12, var(--secondary-text-color)));
     letter-spacing: 0.0375rem;
     padding-left: 0.1875rem;
@@ -521,9 +523,11 @@ class DadosCard extends HTMLElement {
     this._lightRgb = lightRgb;
     const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
-    // effectiveRgb: used for brightness gradient fallback
+    // effectiveRgb: used for img cell background (NOT for brightness slider)
     const effectiveRgb = cfgRgb ?? lightRgb ?? FALLBACK_RGB;
-    this._effectiveRgb = effectiveRgb;       // stored for real-time brightness updates
+    // lightRgb stored separately so the brightness slider can fall back to the
+    // entity's actual colour without being polluted by config.color (img cell).
+    this._lightRgb = lightRgb;
 
     // Cell background — supports CSS vars in config.color
     const cellBg = isOn
@@ -613,13 +617,14 @@ class DadosCard extends HTMLElement {
   _setBrightnessProgress(value) {
     const pct = Math.round((value / 255) * 100);
 
-    // brightness_color config → fallback to effectiveRgb
+    // Independent fallback chain: brightness_color → entity rgb_color → FALLBACK.
+    // config.color (img cell) is deliberately excluded so the two don't bleed into each other.
     const cfgBrightRgb = parseRgb(this._cfg.brightness_color);
-    const baseRgb  = cfgBrightRgb ?? this._effectiveRgb;
+    const baseRgb  = cfgBrightRgb ?? this._lightRgb ?? FALLBACK_RGB;
     const progCss  = (this._cfg.brightness_color && !cfgBrightRgb)
       ? this._cfg.brightness_color   // CSS var passthrough for progress
       : rgbCss(baseRgb);
-    // Track = same color as progress at 30% alpha
+    // Track = same base colour at 30 % alpha
     const trackCss = rgba(baseRgb, 0.3);
 
     // Rounded progress segment (design like reference):
