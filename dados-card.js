@@ -249,16 +249,14 @@ const STYLES = /* css */ `
 
   /* ── Hue slider: rainbow ── */
   .hue-slider {
-    background: linear-gradient(to right,
-      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
-      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
-      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .hue-slider::-moz-range-track {
-    background: linear-gradient(to right,
-      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
-      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
-      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Indicator button next to each slider ── */
@@ -615,22 +613,22 @@ class DadosCard extends HTMLElement {
   _setBrightnessProgress(value) {
     const pct = Math.round((value / 255) * 100);
 
-    // Progress color priority:
-    // 1) explicit brightness_color (rgb/hex), 2) current light rgb, 3) FALLBACK_RGB.
-    const customSliderColor = (this._cfg.brightness_color || '').toString().trim();
-    const sliderRgb = parseRgb(customSliderColor);
-    const baseRgb = sliderRgb ?? this._lightRgb ?? FALLBACK_RGB;
+    // brightness_color config → fallback to effectiveRgb
+    const cfgBrightRgb = parseRgb(this._cfg.brightness_color);
+    const baseRgb  = cfgBrightRgb ?? this._effectiveRgb;
+    const progCss  = (this._cfg.brightness_color && !cfgBrightRgb)
+      ? this._cfg.brightness_color   // CSS var passthrough for progress
+      : rgbCss(baseRgb);
+    // Track = same color as progress at 30% alpha
+    const trackCss = rgba(baseRgb, 0.3);
 
-    // Progress uses plain resolved RGB value (no filter/no alpha).
-    const progCss = rgbCss(baseRgb);
-    // Track keeps same base color at low visibility.
-    const trackCss = rgba(baseRgb, 0.1);
-
-    // Slightly rounded progress end (less round than before).
+    // Rounded progress segment (design like reference):
+    // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
+    // Cap radius is half of slider height (3.5625rem / 2 = 1.78125rem).
     this._el.brightSlider.style.setProperty('--_bright-bg',
       `linear-gradient(${trackCss}, ${trackCss}),
        linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
-       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.1rem, transparent 1.11rem)`);
+       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.78125rem, transparent 1.79rem)`);
   }
 
   // ── Capability detection ───────────────────────────────────
