@@ -143,10 +143,10 @@ const STYLES = /* css */ `
 
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
-    width: 2.9375rem;
-    height: 2.9375rem;
+    width: 3.5625rem;
+    height: 3.5625rem;
     border: none;
-    border-radius: 0.9375rem;
+    border-radius: 1.5rem;
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
@@ -158,7 +158,7 @@ const STYLES = /* css */ `
   }
 
   .toggle-btn ha-icon {
-    --mdc-icon-size: 1.875rem;
+    --mdc-icon-size: 2.25rem;
     color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
   }
@@ -174,7 +174,7 @@ const STYLES = /* css */ `
 
   .slider-row {
     display: grid;
-    grid-template-columns: 1fr 3.125rem;
+    grid-template-columns: 1fr 3.5625rem;
     gap: 0.5rem;
     align-items: center;
   }
@@ -204,32 +204,23 @@ const STYLES = /* css */ `
   /* White oval thumb (all sliders) — no shadow */
   .dado-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 1.125rem;
+    width: 0.5625rem;
     height: 2.625rem;
     border-radius: 0.5625rem;
-    background: rgba(255,255,255,0.92);
+    background: #fff;
     box-shadow: none;
     cursor: pointer;
   }
   .dado-slider::-moz-range-thumb {
-    width: 1.125rem;
+    width: 0.5625rem;
     height: 2.625rem;
     border-radius: 0.5625rem;
-    background: rgba(255,255,255,0.92);
+    background: #fff;
     box-shadow: none;
     border: none;
     cursor: pointer;
   }
 
-  /* ── Brightness thumb: half-width, solid white ── */
-  .brightness-slider::-webkit-slider-thumb {
-    width: 0.5625rem;
-    background: #fff;
-  }
-  .brightness-slider::-moz-range-thumb {
-    width: 0.5625rem;
-    background: #fff;
-  }
   .dado-slider::-moz-range-track {
     height: 3.5625rem;
     border-radius: 1.5rem;
@@ -254,24 +245,22 @@ const STYLES = /* css */ `
 
   /* ── Hue slider: rainbow ── */
   .hue-slider {
-    background: linear-gradient(to right,
-      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
-      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
-      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .hue-slider::-moz-range-track {
-    background: linear-gradient(to right,
-      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
-      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
-      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Indicator button next to each slider ── */
   .ctrl-btn {
-    width: 3.125rem;
-    height: 3.125rem;
+    width: 3.5625rem;
+    height: 3.5625rem;
     border: none;
-    border-radius: 1rem;
+    border-radius: 1.5rem;
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
@@ -281,7 +270,7 @@ const STYLES = /* css */ `
     cursor: default;
   }
   .ctrl-btn ha-icon {
-    --mdc-icon-size: 1.375rem;
+    --mdc-icon-size: 2.25rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
@@ -388,6 +377,7 @@ class DadosCard extends HTMLElement {
     this._expanded = false;
     this._stateKey = null;
     this._effectiveRgb = FALLBACK_RGB;
+    this._lightRgb = null;
 
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._buildDom();
@@ -524,6 +514,7 @@ class DadosCard extends HTMLElement {
     // Toggle colour is independent: config.toggle_color → HA rgb_color → FALLBACK_RGB
 
     const lightRgb   = haLightRgb(state);   // may be null if no color info
+    this._lightRgb = lightRgb;
     const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
     // effectiveRgb: used for brightness gradient fallback
