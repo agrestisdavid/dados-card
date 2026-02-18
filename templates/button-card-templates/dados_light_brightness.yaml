@@ -3,6 +3,7 @@ dados_light_brightness:
   variables:
     entity: null
     icon: m3of:percent
+    brightness_color: null             # optional hex/rgb override for the slider colour
 
   custom_fields:
     slider:
@@ -18,22 +19,30 @@ dados_light_brightness:
         styles:
           # Outer wrapper of the slider component
           container:
-            - border-radius: 24px                  # rounded corners for the whole control
+            - border-radius: 18px                  # rounded corners for the whole control
 
-          # The “card” area behind the slider
+          # The "card" area behind the slider
           card:
             - margin-bottom: 0px                   # no extra spacing below
-            - border-radius: 24px
+            - border-radius: 18px
             - height: 57px                         # slider height
             - background: var(--contrast2)         # neutral background
 
           # Filled part (progress)
+          # Priority: brightness_color variable → entity rgb_color → var(--yellow)
           progress:
-            - border-radius: 24px
+            - border-radius: 18px
             - background: |
                 [[[
-                  // Use the entity's rgb_color if available (lights),
-                  // otherwise fall back to a theme color.
+                  const custom = variables?.brightness_color;
+                  if (custom) {
+                    const m = custom.match(/^#([0-9a-f]{6})$/i);
+                    if (m) {
+                      const [r,g,b] = [0,2,4].map(i => parseInt(m[1].slice(i,i+2), 16));
+                      return `rgba(${r},${g},${b},0.7)`;
+                    }
+                    return custom; // CSS var passthrough
+                  }
                   const c = entity?.attributes?.rgb_color;
                   return c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.7)` : 'var(--yellow)';
                 ]]]
@@ -48,13 +57,20 @@ dados_light_brightness:
             - background: var(--black1)            # thumb color
 
           # Unfilled track background
+          # Priority: brightness_color variable (0.1 alpha) → entity rgb_color (0.1) → neutral
           track:
-            - border-radius: 24px                  # same rounding as progress
+            - border-radius: 18px                  # same rounding as progress
             - background: |
                 [[[
-                  // When the entity is off -> keep track neutral
                   if (entity?.state !== 'on') return 'var(--contrast3)';
-                  // When on -> tint track lightly with the entity color
+                  const custom = variables?.brightness_color;
+                  if (custom) {
+                    const m = custom.match(/^#([0-9a-f]{6})$/i);
+                    if (m) {
+                      const [r,g,b] = [0,2,4].map(i => parseInt(m[1].slice(i,i+2), 16));
+                      return `rgba(${r},${g},${b},0.1)`;
+                    }
+                  }
                   const c = entity?.attributes?.rgb_color;
                   return c
                     ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.1)`
@@ -64,6 +80,6 @@ dados_light_brightness:
         card_mod:
           style: |
             ha-card {
-              border-radius: 24px !important;      /* match slider rounding */
+              border-radius: 18px !important;      /* match slider rounding */
               overflow: hidden;                    /* keep progress neatly clipped */
             }
