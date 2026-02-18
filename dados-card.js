@@ -237,18 +237,26 @@ const STYLES = /* css */ `
     background: var(--_bright-bg, rgba(127,127,127,0.3));
   }
 
-  /* ── Color-temp slider & Hue slider: same low→high temperature gradient ── */
-  .colortemp-slider,
-  .hue-slider {
+  /* ── Color-temp slider: low→high temperature gradient ── */
+  .colortemp-slider {
     background: linear-gradient(90deg,
       rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
       rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
-  .colortemp-slider::-moz-range-track,
-  .hue-slider::-moz-range-track {
+  .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
       rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
       rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
+  }
+
+  /* ── Hue slider: full hue rainbow ── */
+  .hue-slider {
+    background: linear-gradient(to right,
+      #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 66%, #f0f 83%, #f00 100%);
+  }
+  .hue-slider::-moz-range-track {
+    background: linear-gradient(to right,
+      #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 66%, #f0f 83%, #f00 100%);
   }
 
   /* ── Indicator button next to each slider ── */
@@ -266,7 +274,7 @@ const STYLES = /* css */ `
     cursor: default;
   }
   .ctrl-btn ha-icon {
-    --mdc-icon-size: 1.125rem;
+    --mdc-icon-size: 2.5rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
@@ -627,13 +635,11 @@ class DadosCard extends HTMLElement {
       trackCss = rgba(baseRgb, 0.3);
     }
 
-    // Rounded progress segment (design like reference):
-    // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
-    // Cap radius is half of slider height (3.5625rem / 2 = 1.78125rem).
+    // Two-layer progress: track (full width, 30% alpha) + progress body (0→pct%).
+    // The right-side cap shape is determined by .slider-wrap's border-radius + overflow:hidden.
     this._el.brightSlider.style.setProperty('--_bright-bg',
       `linear-gradient(${trackCss}, ${trackCss}),
-       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
-       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.78125rem, transparent 1.79rem)`);
+       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%)`);
   }
 
   // ── Capability detection ───────────────────────────────────
