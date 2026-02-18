@@ -274,7 +274,7 @@ const STYLES = /* css */ `
     cursor: default;
   }
   .ctrl-btn ha-icon {
-    --mdc-icon-size: 2.5rem;
+    --mdc-icon-size: 2rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
@@ -635,11 +635,13 @@ class DadosCard extends HTMLElement {
       trackCss = rgba(baseRgb, 0.3);
     }
 
-    // Two-layer progress: track (full width, 30% alpha) + progress body (0→pct%).
-    // The right-side cap shape is determined by .slider-wrap's border-radius + overflow:hidden.
+    // Three-layer progress: track (full width, 30% alpha) + progress body + round right-side cap.
+    // Cap radius is controlled by the CSS variable --bright-cap-r (default = half slider height
+    // = 1.78125rem = full pill). Set a smaller value for a less rounded cap, 0 for square.
     this._el.brightSlider.style.setProperty('--_bright-bg',
       `linear-gradient(${trackCss}, ${trackCss}),
-       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%)`);
+       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
+       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 var(--bright-cap-r, 1.78125rem), transparent calc(var(--bright-cap-r, 1.78125rem) + 0.02rem))`);
   }
 
   // ── Capability detection ───────────────────────────────────
