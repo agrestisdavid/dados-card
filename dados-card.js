@@ -76,7 +76,7 @@ const STYLES = /* css */ `
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 5.25rem;
+    min-height: 5rem;
     box-sizing: border-box;
     border-radius: 2.25rem;
     padding: 1.3125rem 1.25rem;
@@ -184,7 +184,7 @@ const STYLES = /* css */ `
   /* Slider wrapper — clips thumb overflow at pill corners */
   .slider-wrap {
     overflow: hidden;
-    border-radius: 1.5rem;
+    border-radius: 1.125rem;
     height: 3.5625rem;
     display: block;
   }
@@ -196,7 +196,7 @@ const STYLES = /* css */ `
     display: block;
     width: 100%;
     height: 3.5625rem;
-    border-radius: 1.5rem;
+    border-radius: 1.125rem;
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -225,7 +225,7 @@ const STYLES = /* css */ `
 
   .dado-slider::-moz-range-track {
     height: 3.5625rem;
-    border-radius: 1.5rem;
+    border-radius: 1.125rem;
     border: none;
   }
 
@@ -276,7 +276,7 @@ const STYLES = /* css */ `
     cursor: default;
   }
   .ctrl-btn ha-icon {
-    --mdc-icon-size: 2.25rem;
+    --mdc-icon-size: 1.125rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
