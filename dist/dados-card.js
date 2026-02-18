@@ -241,6 +241,7 @@ const STYLES = /* css */ `
     position: relative;
     z-index: 1;
     background: transparent;
+    width: calc(100% - 14px);
   }
   .brightness-slider::-moz-range-track {
     background: transparent;
@@ -288,7 +289,7 @@ const STYLES = /* css */ `
   }
   .ctrl-btn ha-icon {
     --mdc-icon-size: 2.25rem;
-    color: var(--contrast12, var(--secondary-text-color));
+    color: var(--dados-ctrl-icon-color, var(--contrast12, var(--secondary-text-color)));
   }
 
   .hidden { display: none !important; }
@@ -309,6 +310,7 @@ const EDITOR_SCHEMA = [
       { name: 'icon_color_off',       label: 'Icon-Farbe wenn aus',                             selector: { text: {} } },
       { name: 'brightness_color',     label: 'Brightness Slider Farbe',                         selector: { text: {} } },
       { name: 'button_background',    label: 'Toggle & Slider-Icons Hintergrund',               selector: { text: {} } },
+      { name: 'slider_icon_color',    label: 'Slider-Icons Farbe',                             selector: { text: {} } },
       { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
     ],
   },
@@ -619,7 +621,8 @@ class DadosCard extends HTMLElement {
     // Card background
     this._setProp(s, '--dados-card-bg',    this._cfg.card_background_color);
     // Button backgrounds (toggle + slider ctrl-btn)
-    this._setProp(s, '--dados-btn-bg',     this._cfg.button_background);
+    this._setProp(s, '--dados-btn-bg',          this._cfg.button_background);
+    this._setProp(s, '--dados-ctrl-icon-color',  this._cfg.slider_icon_color);
     // Border radii
     this._setProp(s, '--dados-card-radius',   this._cfg.card_border_radius);
     this._setProp(s, '--dados-cell-radius',   this._cfg.cell_border_radius);
@@ -782,7 +785,7 @@ if (!window.customCards.some(c => c.type === 'dados-card')) {
   window.customCards.push({
     type: 'custom:dados-card',
     name: 'Dados Card',
-    description: 'Light card with dynamic glow, adaptive height, and smart sliders.',
+    description: 'Light card with dynamic glow, adaptive height, and smart sliders. · Lichtkarte mit dynamischem Leuchten, adaptiver Höhe und intelligenten Reglern.',
     preview: true,
   });
 }
