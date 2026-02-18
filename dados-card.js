@@ -235,12 +235,16 @@ const STYLES = /* css */ `
     background: var(--_bright-bg, rgba(127,127,127,0.3));
   }
 
-  /* ── Color-temp slider: fixed cool→warm gradient ── */
+  /* ── Color-temp slider: low→high temperature gradient ── */
   .colortemp-slider {
-    background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .colortemp-slider::-moz-range-track {
-    background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Hue slider: rainbow ── */
