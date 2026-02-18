@@ -30,7 +30,6 @@ dados_light_brightness:
           # Filled part (progress)
           progress:
             - border-radius: 24px
-            - z-index: 2                           # render above thumb so thumb appears behind
             - background: |
                 [[[
                   // Use the entity's rgb_color if available (lights),
@@ -47,18 +46,18 @@ dados_light_brightness:
             - margin-right: 11px                   # inset from the right edge
             - border-radius: 5px
             - background: var(--black1)            # thumb color
-            - z-index: 1                           # behind progress bar
 
           # Unfilled track background
           track:
-            - border-radius: 24px                  # match progress rounding
+            - border-radius: 24px                  # same rounding as progress
             - background: |
                 [[[
-                  // Always tint track with entity color so it follows the brightness slider color.
-                  // Using 0.2 opacity for sufficient contrast in both light and dark mode.
+                  // When the entity is off -> keep track neutral
+                  if (entity?.state !== 'on') return 'var(--contrast3)';
+                  // When on -> tint track lightly with the entity color
                   const c = entity?.attributes?.rgb_color;
                   return c
-                    ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.2)`
+                    ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.1)`
                     : 'var(--yellow-tint)';
                 ]]]
 

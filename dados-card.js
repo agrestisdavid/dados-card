@@ -80,13 +80,9 @@ const STYLES = /* css */ `
     box-sizing: border-box;
     border-radius: 2.25rem;
     padding: 1.3125rem 1.25rem;
-    overflow: hidden;
+    overflow: visible;
     backdrop-filter: blur(20px);
-    /* Glow layer sits on top of the card background; rendered inside the card so
-       it is never clipped. --dados-glow-color is transparent when glow is off. */
-    background:
-      radial-gradient(ellipse at 5% 15%, var(--dados-glow-color, transparent) 0%, transparent 65%),
-      var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
+    background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
 
   /* ── Main row: always at top, vertically centered within its own height ── */
@@ -104,6 +100,7 @@ const STYLES = /* css */ `
     height: 3.375rem;
     border-radius: 1.375rem;
     background: var(--dados-cell-bg, rgba(127,127,127,0.15));
+    box-shadow: var(--dados-glow, none);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -112,7 +109,7 @@ const STYLES = /* css */ `
     padding: 0;
     overflow: visible;
     flex-shrink: 0;
-    transition: background 0.3s;
+    transition: background 0.3s, box-shadow 0.3s;
   }
 
   .icon-tile ha-icon {
@@ -586,11 +583,9 @@ class DadosCard extends HTMLElement {
     const s = this._el.card.style;
 
     s.setProperty('--dados-cell-bg',    cellBg);
-    // Glow is rendered as a radial-gradient layer on the card background so it
-    // is never clipped by overflow:hidden.  Set to transparent to disable.
-    s.setProperty('--dados-glow-color', (isOn && this._cfg.glow !== false)
-      ? rgba(glowRgb, 0.45)
-      : 'transparent');
+    s.setProperty('--dados-glow',       (isOn && this._cfg.glow !== false)
+      ? `-55px -50px 70px 20px ${rgba(glowRgb, 0.7)}, -35px -35px 70px 10px ${rgba(glowRgb, 0.8)}`
+      : 'none');
     s.setProperty('--dados-icon-color', isOn
       ? (this._cfg.icon_color     || 'var(--contrast2, #fff)')
       : (this._cfg.icon_color_off || 'var(--contrast16, #888)'));
