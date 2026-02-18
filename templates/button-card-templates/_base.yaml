@@ -7,6 +7,8 @@ dados_base:
     card_height: 80px                # Fixed height (or set null/auto in child)
     card_border_radius: 36px         # Corner radius for the whole card
     img_cell_background: var(--blue) # Background behind the icon tile (can be overridden per state)
+    glow_color: null                 # Optional custom glow color (e.g. red, yellow, #ff0000, rgb(...), var(...))
+    glow_fallback_rgb: [255, 218, 120] # Fallback when no custom/entity color is available
     show_glow: true                  # Enables/disables the big glow box-shadow behind icon tile
     name:                             # Optional: force a custom name (otherwise friendly_name is used)
 
@@ -85,16 +87,37 @@ dados_base:
       - margin-top: 5px
       - border-radius: 18px
       - background: "[[[ return variables.img_cell_background ]]]"
-      - overflow: visible
+      - overflow: hidden
       - box-shadow: |
           [[[
-            // Glow uses entity rgb_color if available (lights), otherwise falls back to img_cell_background.
-            // Set show_glow: false to remove.
+            // Glow priority:
+            // 1) variables.glow_color (named color/hex/rgb/var)
+            // 2) entity.attributes.rgb_color
+            // 3) variables.glow_fallback_rgb
+            // Set show_glow: false to disable.
             if (!variables.show_glow) return 'none';
-            const c = entity?.attributes?.rgb_color;
-            const fb = variables?.img_cell_background || 'var(--red)';
-            const colA = c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.7)` : fb;
-            const colB = c ? `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.8)` : fb;
+
+            const fallback = Array.isArray(variables?.glow_fallback_rgb) && variables.glow_fallback_rgb.length === 3
+              ? variables.glow_fallback_rgb
+              : [255, 218, 120];
+
+            const custom = (variables?.glow_color || variables?.img_cell_background || '').toString().trim();
+            const lightRgb = entity?.attributes?.rgb_color;
+
+            let colA;
+            let colB;
+
+            if (custom) {
+              colA = `color-mix(in srgb, ${custom} 70%, transparent)`;
+              colB = `color-mix(in srgb, ${custom} 80%, transparent)`;
+            } else if (lightRgb) {
+              colA = `rgba(${lightRgb[0]}, ${lightRgb[1]}, ${lightRgb[2]}, 0.7)`;
+              colB = `rgba(${lightRgb[0]}, ${lightRgb[1]}, ${lightRgb[2]}, 0.8)`;
+            } else {
+              colA = `rgba(${fallback[0]}, ${fallback[1]}, ${fallback[2]}, 0.7)`;
+              colB = `rgba(${fallback[0]}, ${fallback[1]}, ${fallback[2]}, 0.8)`;
+            }
+
             return `-55px -50px 70px 20px ${colA}, -35px -35px 70px 10px ${colB}`;
           ]]]
 
