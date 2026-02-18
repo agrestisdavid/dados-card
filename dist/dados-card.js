@@ -75,7 +75,7 @@ const STYLES = /* css */ `
     height: 100%;
     min-height: 5.25rem;
     box-sizing: border-box;
-    border-radius: 2.25rem;
+    border-radius: var(--dados-card-radius, 2.25rem);
     padding: 1.3125rem 1.25rem;
     overflow: hidden;
     backdrop-filter: blur(20px);
@@ -95,7 +95,7 @@ const STYLES = /* css */ `
   .icon-tile {
     width: 2.8125rem;
     height: 2.8125rem;
-    border-radius: 1.125rem;
+    border-radius: var(--dados-cell-radius, 1.125rem);
     background: var(--dados-cell-bg, rgba(127,127,127,0.15));
     box-shadow: var(--dados-glow, none);
     display: flex;
@@ -143,7 +143,7 @@ const STYLES = /* css */ `
     width: 3.5625rem;
     height: 3.5625rem;
     border: none;
-    border-radius: 1.5rem;
+    border-radius: var(--dados-toggle-radius, 1.5rem);
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
@@ -180,7 +180,7 @@ const STYLES = /* css */ `
   .slider-wrap {
     position: relative;
     overflow: hidden;
-    border-radius: 1.5rem;
+    border-radius: var(--dados-slider-radius, 1.5rem);
     height: 3.5625rem;
     display: block;
   }
@@ -275,7 +275,7 @@ const STYLES = /* css */ `
     width: 3.5625rem;
     height: 3.5625rem;
     border: none;
-    border-radius: 1.5rem;
+    border-radius: var(--dados-toggle-radius, 1.5rem);
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
@@ -285,7 +285,7 @@ const STYLES = /* css */ `
     cursor: default;
   }
   .ctrl-btn ha-icon {
-    --mdc-icon-size: 2rem;
+    --mdc-icon-size: 2.25rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
@@ -316,6 +316,15 @@ const EDITOR_SCHEMA = [
       { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
       { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
       { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
+    ],
+  },
+  {
+    type: 'expandable', title: 'Form & Radius',
+    schema: [
+      { name: 'card_border_radius',   label: 'Karte Border Radius (z.B. 2.25rem)',           selector: { text: {} } },
+      { name: 'cell_border_radius',   label: 'Icon Tile Border Radius (z.B. 1.375rem)',      selector: { text: {} } },
+      { name: 'toggle_border_radius', label: 'Toggle & Slider-Icons Border Radius (z.B. 1.5rem)', selector: { text: {} } },
+      { name: 'slider_border_radius', label: 'Slider Border Radius (z.B. 1.5rem)',           selector: { text: {} } },
     ],
   },
   {
@@ -606,6 +615,11 @@ class DadosCard extends HTMLElement {
     this._setProp(s, '--dados-state-color',this._cfg.state_color);
     // Card background
     this._setProp(s, '--dados-card-bg',    this._cfg.card_background_color);
+    // Border radii
+    this._setProp(s, '--dados-card-radius',   this._cfg.card_border_radius);
+    this._setProp(s, '--dados-cell-radius',   this._cfg.cell_border_radius);
+    this._setProp(s, '--dados-toggle-radius', this._cfg.toggle_border_radius);
+    this._setProp(s, '--dados-slider-radius', this._cfg.slider_border_radius);
   }
 
   /** Set or remove a CSS custom property depending on whether value is truthy. */
@@ -641,9 +655,10 @@ class DadosCard extends HTMLElement {
 
     // Real elements: .bright-track = full-width 30% bg, .bright-progress = rectangle with
     // border-radius inherited from .slider-wrap (adjustable via CSS).
+    // Progress extends ~0.4rem past the thumb center so the thumb sits just behind the cap.
     this._el.brightTrack.style.background    = trackCss;
     this._el.brightProgress.style.background = progCss;
-    this._el.brightProgress.style.width      = `${pct}%`;
+    this._el.brightProgress.style.width      = `calc(${pct}% + 0.4rem)`;
   }
 
   // ── Capability detection ───────────────────────────────────
