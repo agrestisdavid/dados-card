@@ -7,6 +7,9 @@ const DEFAULTS = {
   icon_off:        'mdi:lightbulb-outline',
   toggle_icon_on:  'mdi:toggle-switch',
   toggle_icon_off: 'mdi:toggle-switch-off-outline',
+  brightness_icon: 'mdi:brightness-percent',
+  color_temp_icon: 'mdi:thermometer',
+  hue_icon:        'mdi:palette',
   hold_ms:         500,
   glow:            true,
 };
@@ -79,13 +82,17 @@ const STYLES = /* css */ `
     padding: 1.3125rem 1.25rem;
     overflow: hidden;
     backdrop-filter: blur(20px);
-    background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
+    /* Glow layer sits on top of the card background; rendered inside the card so
+       it is never clipped. --dados-glow-color is transparent when glow is off. */
+    background:
+      radial-gradient(ellipse at 5% 15%, var(--dados-glow-color, transparent) 0%, transparent 65%),
+      var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
 
   /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
-    grid-template-columns: 2.8125rem 1fr auto;
+    grid-template-columns: 3.375rem 1fr auto;
     align-items: center;
     gap: 0.625rem;
     flex-shrink: 0;
@@ -93,11 +100,10 @@ const STYLES = /* css */ `
 
   /* ── Icon tile ───────────────────────────────────────────────── */
   .icon-tile {
-    width: 2.8125rem;
-    height: 2.8125rem;
-    border-radius: 1.125rem;
+    width: 3.375rem;
+    height: 3.375rem;
+    border-radius: 1.375rem;
     background: var(--dados-cell-bg, rgba(127,127,127,0.15));
-    box-shadow: var(--dados-glow, none);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,11 +112,11 @@ const STYLES = /* css */ `
     padding: 0;
     overflow: visible;
     flex-shrink: 0;
-    transition: background 0.3s, box-shadow 0.3s;
+    transition: background 0.3s;
   }
 
   .icon-tile ha-icon {
-    --mdc-icon-size: 2rem;
+    --mdc-icon-size: 2.25rem;
     color: var(--dados-icon-color, var(--contrast2, #fff));
     transition: color 0.3s;
   }
@@ -217,6 +223,16 @@ const STYLES = /* css */ `
     border: none;
     cursor: pointer;
   }
+
+  /* ── Brightness thumb: half-width, solid white ── */
+  .brightness-slider::-webkit-slider-thumb {
+    width: 0.5625rem;
+    background: #fff;
+  }
+  .brightness-slider::-moz-range-thumb {
+    width: 0.5625rem;
+    background: #fff;
+  }
   .dado-slider::-moz-range-track {
     height: 3.125rem;
     border-radius: 1.5625rem;
@@ -295,10 +311,13 @@ const EDITOR_SCHEMA = [
   {
     type: 'expandable', title: 'Icons',
     schema: [
-      { name: 'icon_on',        label: 'Icon (An)',         selector: { icon: {} } },
-      { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
-      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
+      { name: 'icon_on',        label: 'Icon (An)',              selector: { icon: {} } },
+      { name: 'icon_off',       label: 'Icon (Aus)',             selector: { icon: {} } },
+      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',       selector: { icon: {} } },
+      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)',      selector: { icon: {} } },
+      { name: 'brightness_icon',label: 'Helligkeit Slider Icon', selector: { icon: {} } },
+      { name: 'color_temp_icon',label: 'Farbtemperatur Slider Icon', selector: { icon: {} } },
+      { name: 'hue_icon',       label: 'Farbe (Hue) Slider Icon', selector: { icon: {} } },
     ],
   },
   {
@@ -414,7 +433,7 @@ class DadosCard extends HTMLElement {
                      type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon icon="mdi:brightness-percent"></ha-icon>
+              <ha-icon id="brightIcon"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="ctRow">
@@ -423,7 +442,7 @@ class DadosCard extends HTMLElement {
                      type="range" step="1" aria-label="Farbtemperatur"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon icon="mdi:thermometer"></ha-icon>
+              <ha-icon id="ctIcon"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="hueRow">
@@ -432,7 +451,7 @@ class DadosCard extends HTMLElement {
                      type="range" min="0" max="360" step="1" aria-label="Farbe"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon icon="mdi:palette"></ha-icon>
+              <ha-icon id="hueIcon"></ha-icon>
             </button>
           </div>
         </div>
@@ -446,9 +465,9 @@ class DadosCard extends HTMLElement {
       toggleBtn:    $('toggleBtn'), toggleIconEl:$('toggleIconEl'),
       textBlock:    $('textBlock'),
       controls:     $('controls'),
-      brightRow:    $('brightRow'), brightSlider:$('brightSlider'),
-      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),
-      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),
+      brightRow:    $('brightRow'), brightSlider:$('brightSlider'), brightIcon: $('brightIcon'),
+      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),     ctIcon:     $('ctIcon'),
+      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),    hueIcon:    $('hueIcon'),
     };
     this._bindEvents();
   }
@@ -539,7 +558,12 @@ class DadosCard extends HTMLElement {
     const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
     this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
     this._el.toggleIconEl.setAttribute('icon',
-      isOn ? this._cfg.toggle_icon_on : this._cfg.toggle_icon_off);
+      isOn ? (this._cfg.toggle_icon_on  || DEFAULTS.toggle_icon_on)
+           : (this._cfg.toggle_icon_off || DEFAULTS.toggle_icon_off));
+    // Slider icons — configurable, fallback to DEFAULTS
+    this._el.brightIcon.setAttribute('icon', this._cfg.brightness_icon || DEFAULTS.brightness_icon);
+    this._el.ctIcon.setAttribute('icon',     this._cfg.color_temp_icon || DEFAULTS.color_temp_icon);
+    this._el.hueIcon.setAttribute('icon',    this._cfg.hue_icon        || DEFAULTS.hue_icon);
 
     // ── Slider values ──────────────────────────────────────
     if (hasBright) {
@@ -562,9 +586,11 @@ class DadosCard extends HTMLElement {
     const s = this._el.card.style;
 
     s.setProperty('--dados-cell-bg',    cellBg);
-    s.setProperty('--dados-glow',       (isOn && this._cfg.glow !== false)
-      ? `-55px -50px 70px 20px ${rgba(glowRgb, 0.7)}, -35px -35px 70px 10px ${rgba(glowRgb, 0.8)}`
-      : 'none');
+    // Glow is rendered as a radial-gradient layer on the card background so it
+    // is never clipped by overflow:hidden.  Set to transparent to disable.
+    s.setProperty('--dados-glow-color', (isOn && this._cfg.glow !== false)
+      ? rgba(glowRgb, 0.45)
+      : 'transparent');
     s.setProperty('--dados-icon-color', isOn
       ? (this._cfg.icon_color     || 'var(--contrast2, #fff)')
       : (this._cfg.icon_color_off || 'var(--contrast16, #888)'));
@@ -591,18 +617,19 @@ class DadosCard extends HTMLElement {
   _setBrightnessProgress(value) {
     const pct = Math.round((value / 255) * 100);
 
-    // Progress & track both derive from brightness_color config → fallback to effectiveRgb
+    // brightness_color config → fallback to effectiveRgb
     const cfgBrightRgb = parseRgb(this._cfg.brightness_color);
     const baseRgb  = cfgBrightRgb ?? this._effectiveRgb;
     const progCss  = (this._cfg.brightness_color && !cfgBrightRgb)
       ? this._cfg.brightness_color   // CSS var passthrough for progress
       : rgbCss(baseRgb);
-    const trackRgb = baseRgb.map(c => Math.round(c * 0.35));
-    const trackCss = rgbCss(trackRgb);
+    // Track = same color as progress at 30% alpha
+    const trackCss = rgba(baseRgb, 0.3);
 
-    // CSS var on the slider element → picked up by both Webkit and Firefox rules
+    // Extend progress ~5 px past the thumb centre so the narrow thumb sits
+    // visually just inside (behind) the coloured progress end.
     this._el.brightSlider.style.setProperty('--_bright-bg',
-      `linear-gradient(to right, ${progCss} ${pct}%, ${trackCss} ${pct}%)`);
+      `linear-gradient(to right, ${progCss} calc(${pct}% + 0.35rem), ${trackCss} calc(${pct}% + 0.5rem))`);
   }
 
   // ── Capability detection ───────────────────────────────────
