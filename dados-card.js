@@ -69,13 +69,11 @@ function haLightRgb(stateObj) {
 const STYLES = /* css */ `
   :host {
     display: block;
-    height: 100%;
   }
 
   ha-card {
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 5rem;
     box-sizing: border-box;
     border-radius: var(--dados-card-radius, 2.25rem);
@@ -149,7 +147,7 @@ const STYLES = /* css */ `
     height: 3.5625rem;
     border: none;
     border-radius: var(--dados-toggle-radius, 1.5rem);
-    background: var(--contrast3, rgba(127,127,127,0.15));
+    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -211,7 +209,7 @@ const STYLES = /* css */ `
     display: block;
     width: 100%;
     height: 3.5625rem;
-    border-radius: 1rem;
+    border-radius: var(--dados-slider-radius, 1.5rem);
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -240,7 +238,7 @@ const STYLES = /* css */ `
 
   .dado-slider::-moz-range-track {
     height: 3.5625rem;
-    border-radius: 1.5rem;
+    border-radius: var(--dados-slider-radius, 1.5rem);
     border: none;
   }
 
@@ -282,7 +280,7 @@ const STYLES = /* css */ `
     height: 3.5625rem;
     border: none;
     border-radius: var(--dados-toggle-radius, 1.5rem);
-    background: var(--contrast3, rgba(127,127,127,0.15));
+    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -312,6 +310,7 @@ const EDITOR_SCHEMA = [
       { name: 'icon_color',           label: 'Icon-Farbe wenn an',                              selector: { text: {} } },
       { name: 'icon_color_off',       label: 'Icon-Farbe wenn aus',                             selector: { text: {} } },
       { name: 'brightness_color',     label: 'Brightness Slider Farbe',                         selector: { text: {} } },
+      { name: 'button_background',    label: 'Toggle & Slider-Icons Hintergrund',               selector: { text: {} } },
       { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
     ],
   },
@@ -631,6 +630,8 @@ class DadosCard extends HTMLElement {
     this._setProp(s, '--dados-state-color',this._cfg.state_color);
     // Card background
     this._setProp(s, '--dados-card-bg',    this._cfg.card_background_color);
+    // Button backgrounds (toggle + slider ctrl-btn)
+    this._setProp(s, '--dados-btn-bg',     this._cfg.button_background);
     // Border radii
     this._setProp(s, '--dados-card-radius',   this._cfg.card_border_radius);
     this._setProp(s, '--dados-cell-radius',   this._cfg.cell_border_radius);
@@ -674,7 +675,7 @@ class DadosCard extends HTMLElement {
     // Progress extends ~0.4rem past the thumb center so the thumb sits just behind the cap.
     this._el.brightTrack.style.background    = trackCss;
     this._el.brightProgress.style.background = progCss;
-    this._el.brightProgress.style.width      = `calc(${pct}% + 0.4rem)`;
+    this._el.brightProgress.style.width      = `calc(${pct}% + 8px)`;
   }
 
   // ── Capability detection ───────────────────────────────────
@@ -706,6 +707,7 @@ class DadosCard extends HTMLElement {
       if (!hasAny) return;
       this._expanded = !this._expanded;
       this._el.controls.classList.toggle('hidden', !this._expanded);
+      this.dispatchEvent(new Event('card-updated', { bubbles: true }));
     });
 
     // Brightness — real-time visual + HA call on release
