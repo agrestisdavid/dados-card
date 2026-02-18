@@ -627,10 +627,13 @@ class DadosCard extends HTMLElement {
     // Track = same color as progress at 30% alpha
     const trackCss = rgba(baseRgb, 0.3);
 
-    // Extend progress ~5 px past the thumb centre so the narrow thumb sits
-    // visually just inside (behind) the coloured progress end.
+    // Rounded progress segment (design like reference):
+    // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
+    // Cap radius is half of slider height (3.5625rem / 2 = 1.78125rem).
     this._el.brightSlider.style.setProperty('--_bright-bg',
-      `linear-gradient(to right, ${progCss} calc(${pct}% + 0.35rem), ${trackCss} calc(${pct}% + 0.5rem))`);
+      `linear-gradient(${trackCss}, ${trackCss}),
+       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
+       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.78125rem, transparent 1.79rem)`);
   }
 
   // ── Capability detection ───────────────────────────────────
