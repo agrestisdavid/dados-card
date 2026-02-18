@@ -184,7 +184,7 @@ const STYLES = /* css */ `
   /* Slider wrapper — clips thumb overflow at pill corners */
   .slider-wrap {
     overflow: hidden;
-    border-radius: 1.125rem;
+    border-radius: 1.5rem;
     height: 3.5625rem;
     display: block;
   }
@@ -196,7 +196,7 @@ const STYLES = /* css */ `
     display: block;
     width: 100%;
     height: 3.5625rem;
-    border-radius: 1.125rem;
+    border-radius: 1rem;
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -225,7 +225,7 @@ const STYLES = /* css */ `
 
   .dado-slider::-moz-range-track {
     height: 3.5625rem;
-    border-radius: 1.125rem;
+    border-radius: 1.5rem;
     border: none;
   }
 
@@ -266,7 +266,7 @@ const STYLES = /* css */ `
     width: 3.5625rem;
     height: 3.5625rem;
     border: none;
-    border-radius: 1.5rem;
+    border-radius: 1.125rem;
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
