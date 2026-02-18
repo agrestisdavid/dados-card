@@ -597,23 +597,22 @@ class DadosCard extends HTMLElement {
   _setBrightnessProgress(value) {
     const pct = Math.round((value / 255) * 100);
 
-    // Priority for slider color:
-    // 1) brightness_color (custom), 2) current light rgb, 3) FALLBACK_RGB.
-    const customSliderColor = (this._cfg.brightness_color || '').toString().trim();
-    const sliderRgb = parseRgb(customSliderColor);
-    const baseRgb = sliderRgb ?? this._lightRgb ?? FALLBACK_RGB;
+    // brightness_color config → fallback to effectiveRgb
+    const cfgBrightRgb = parseRgb(this._cfg.brightness_color);
+    const baseRgb  = cfgBrightRgb ?? this._effectiveRgb;
+    const progCss  = (this._cfg.brightness_color && !cfgBrightRgb)
+      ? this._cfg.brightness_color   // CSS var passthrough for progress
+      : rgbCss(baseRgb);
+    // Track = same color as progress at 30% alpha
+    const trackCss = rgba(baseRgb, 0.3);
 
-    // Progress always fully saturated; track uses the same color at 10%.
-    const progCss = customSliderColor || rgbCss(baseRgb);
-    const trackCss = customSliderColor
-      ? `color-mix(in srgb, ${customSliderColor} 10%, transparent)`
-      : rgba(baseRgb, 0.1);
-
-    // Rounded progress segment with same corner radius as track (1.5rem).
+    // Rounded progress segment (design like reference):
+    // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
+    // Cap radius is half of slider height (3.5625rem / 2 = 1.78125rem).
     this._el.brightSlider.style.setProperty('--_bright-bg',
       `linear-gradient(${trackCss}, ${trackCss}),
        linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
-       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.5rem, transparent 1.51rem)`);
+       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.78125rem, transparent 1.79rem)`);
   }
 
   // ── Capability detection ───────────────────────────────────
