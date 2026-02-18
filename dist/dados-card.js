@@ -231,24 +231,14 @@ const STYLES = /* css */ `
     background: var(--_bright-bg, rgba(127,127,127,0.3));
   }
 
-  /* ── Color-temp slider: low→high temperature gradient ── */
-  .colortemp-slider {
-    background: linear-gradient(90deg,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
-  }
-  .colortemp-slider::-moz-range-track {
-    background: linear-gradient(90deg,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
-  }
-
-  /* ── Hue slider: rainbow ── */
+  /* ── Color-temp slider & Hue slider: same low→high temperature gradient ── */
+  .colortemp-slider,
   .hue-slider {
     background: linear-gradient(90deg,
       rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
       rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
+  .colortemp-slider::-moz-range-track,
   .hue-slider::-moz-range-track {
     background: linear-gradient(90deg,
       rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
@@ -520,7 +510,7 @@ class DadosCard extends HTMLElement {
 
     // Cell background — supports CSS vars in config.color
     const cellBg = isOn
-      ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 0.7))
+      ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 1))
       : 'var(--contrast3, rgba(127,127,127,0.15))';
 
     // Glow priority: custom color (glow_color or color) → HA rgb/color_temp → fallback RGB
@@ -601,14 +591,25 @@ class DadosCard extends HTMLElement {
   _setBrightnessProgress(value) {
     const pct = Math.round((value / 255) * 100);
 
-    // brightness_color config → fallback to effectiveRgb
+    // Color priority: brightness_color (exclusive) → entity rgb_color → FALLBACK.
+    // When brightness_color is set it is used exclusively for both progress and track.
+    // config.color (img cell) is deliberately excluded so the two don't bleed into each other.
     const cfgBrightRgb = parseRgb(this._cfg.brightness_color);
-    const baseRgb  = cfgBrightRgb ?? this._effectiveRgb;
-    const progCss  = (this._cfg.brightness_color && !cfgBrightRgb)
-      ? this._cfg.brightness_color   // CSS var passthrough for progress
-      : rgbCss(baseRgb);
-    // Track = same color as progress at 30% alpha
-    const trackCss = rgba(baseRgb, 0.3);
+    let progCss, trackCss;
+    if (this._cfg.brightness_color) {
+      if (cfgBrightRgb) {
+        progCss  = rgbCss(cfgBrightRgb);
+        trackCss = rgba(cfgBrightRgb, 0.3);
+      } else {
+        // CSS var passthrough — use color-mix for 30 % track
+        progCss  = this._cfg.brightness_color;
+        trackCss = `color-mix(in srgb, ${this._cfg.brightness_color} 30%, transparent)`;
+      }
+    } else {
+      const baseRgb = this._lightRgb ?? FALLBACK_RGB;
+      progCss  = rgbCss(baseRgb);
+      trackCss = rgba(baseRgb, 0.3);
+    }
 
     // Rounded progress segment (design like reference):
     // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
