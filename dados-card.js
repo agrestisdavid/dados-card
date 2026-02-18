@@ -183,10 +183,25 @@ const STYLES = /* css */ `
 
   /* Slider wrapper — clips thumb overflow at pill corners */
   .slider-wrap {
+    position: relative;
     overflow: hidden;
     border-radius: 1.5rem;
     height: 3.5625rem;
     display: block;
+  }
+
+  /* ── Brightness track + progress (real elements, border-radius friendly) ── */
+  .bright-track {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .bright-progress {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: inherit;
   }
 
   /* Pill slider — shared base */
@@ -229,12 +244,14 @@ const STYLES = /* css */ `
     border: none;
   }
 
-  /* ── Brightness slider: progress-bar style, white oval thumb ── */
+  /* ── Brightness slider: transparent — track + progress are separate divs ── */
   .brightness-slider {
-    background: var(--_bright-bg, rgba(127,127,127,0.3));
+    position: relative;
+    z-index: 1;
+    background: transparent;
   }
   .brightness-slider::-moz-range-track {
-    background: var(--_bright-bg, rgba(127,127,127,0.3));
+    background: transparent;
   }
 
   /* ── Color-temp slider: low→high temperature gradient ── */
@@ -420,6 +437,8 @@ class DadosCard extends HTMLElement {
         <div class="controls hidden" id="controls">
           <div class="slider-row" id="brightRow">
             <div class="slider-wrap">
+              <div class="bright-track" id="brightTrack"></div>
+              <div class="bright-progress" id="brightProgress"></div>
               <input class="dado-slider brightness-slider" id="brightSlider"
                      type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
             </div>
@@ -457,6 +476,7 @@ class DadosCard extends HTMLElement {
       textBlock:    $('textBlock'),
       controls:     $('controls'),
       brightRow:    $('brightRow'), brightSlider:$('brightSlider'), brightIcon: $('brightIcon'),
+      brightTrack:  $('brightTrack'), brightProgress: $('brightProgress'),
       ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),     ctIcon:     $('ctIcon'),
       hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),    hueIcon:    $('hueIcon'),
     };
@@ -635,13 +655,11 @@ class DadosCard extends HTMLElement {
       trackCss = rgba(baseRgb, 0.3);
     }
 
-    // Three-layer progress: track (full width, 30% alpha) + progress body + round right-side cap.
-    // Cap radius is controlled by the CSS variable --bright-cap-r (default = half slider height
-    // = 1.78125rem = full pill). Set a smaller value for a less rounded cap, 0 for square.
-    this._el.brightSlider.style.setProperty('--_bright-bg',
-      `linear-gradient(${trackCss}, ${trackCss}),
-       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
-       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 var(--bright-cap-r, 1.78125rem), transparent calc(var(--bright-cap-r, 1.78125rem) + 0.02rem))`);
+    // Real elements: .bright-track = full-width 30% bg, .bright-progress = rectangle with
+    // border-radius inherited from .slider-wrap (adjustable via CSS).
+    this._el.brightTrack.style.background    = trackCss;
+    this._el.brightProgress.style.background = progCss;
+    this._el.brightProgress.style.width      = `${pct}%`;
   }
 
   // ── Capability detection ───────────────────────────────────
