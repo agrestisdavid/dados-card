@@ -264,14 +264,18 @@ const STYLES = /* css */ `
       rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
-  /* ── Hue slider: full hue rainbow ── */
+  /* ── Hue slider: full hue rainbow (muted) ── */
   .hue-slider {
     background: linear-gradient(to right,
-      #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 66%, #f0f 83%, #f00 100%);
+      hsl(0,65%,55%) 0%, hsl(55,65%,50%) 17%, hsl(120,50%,46%) 33%,
+      hsl(180,50%,46%) 50%, hsl(240,55%,58%) 66%, hsl(300,50%,52%) 83%,
+      hsl(360,65%,55%) 100%);
   }
   .hue-slider::-moz-range-track {
     background: linear-gradient(to right,
-      #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 66%, #f0f 83%, #f00 100%);
+      hsl(0,65%,55%) 0%, hsl(55,65%,50%) 17%, hsl(120,50%,46%) 33%,
+      hsl(180,50%,46%) 50%, hsl(240,55%,58%) 66%, hsl(300,50%,52%) 83%,
+      hsl(360,65%,55%) 100%);
   }
 
   /* ── Indicator button next to each slider ── */
@@ -675,7 +679,7 @@ class DadosCard extends HTMLElement {
     // Progress extends ~0.4rem past the thumb center so the thumb sits just behind the cap.
     this._el.brightTrack.style.background    = trackCss;
     this._el.brightProgress.style.background = progCss;
-    this._el.brightProgress.style.width      = `calc(${pct}% + 8px)`;
+    this._el.brightProgress.style.width      = `calc(${pct}% + 14px)`;
   }
 
   // ── Capability detection ───────────────────────────────────
