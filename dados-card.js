@@ -80,7 +80,7 @@ const STYLES = /* css */ `
     box-sizing: border-box;
     border-radius: 2.25rem;
     padding: 1.3125rem 1.25rem;
-    overflow: visible;
+    overflow: hidden;
     backdrop-filter: blur(20px);
     background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
@@ -107,7 +107,7 @@ const STYLES = /* css */ `
     cursor: pointer;
     border: none;
     padding: 0;
-    overflow: visible;
+    overflow: hidden;
     flex-shrink: 0;
     transition: background 0.3s, box-shadow 0.3s;
   }
@@ -145,10 +145,10 @@ const STYLES = /* css */ `
 
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
-    width: 2.9375rem;
-    height: 2.9375rem;
+    width: 3.5625rem;
+    height: 3.5625rem;
     border: none;
-    border-radius: 0.9375rem;
+    border-radius: 1.5rem;
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
@@ -160,7 +160,7 @@ const STYLES = /* css */ `
   }
 
   .toggle-btn ha-icon {
-    --mdc-icon-size: 1.875rem;
+    --mdc-icon-size: 2.25rem;
     color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
   }
@@ -176,7 +176,7 @@ const STYLES = /* css */ `
 
   .slider-row {
     display: grid;
-    grid-template-columns: 1fr 3.125rem;
+    grid-template-columns: 1fr 3.5625rem;
     gap: 0.5rem;
     align-items: center;
   }
@@ -184,8 +184,8 @@ const STYLES = /* css */ `
   /* Slider wrapper — clips thumb overflow at pill corners */
   .slider-wrap {
     overflow: hidden;
-    border-radius: 1.5625rem;
-    height: 3.125rem;
+    border-radius: 1.5rem;
+    height: 3.5625rem;
     display: block;
   }
 
@@ -195,8 +195,8 @@ const STYLES = /* css */ `
     appearance: none;
     display: block;
     width: 100%;
-    height: 3.125rem;
-    border-radius: 1.5625rem;
+    height: 3.5625rem;
+    border-radius: 1.5rem;
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -206,35 +206,26 @@ const STYLES = /* css */ `
   /* White oval thumb (all sliders) — no shadow */
   .dado-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 1.125rem;
+    width: 0.5625rem;
     height: 2.625rem;
     border-radius: 0.5625rem;
-    background: rgba(255,255,255,0.92);
+    background: #fff;
     box-shadow: none;
     cursor: pointer;
   }
   .dado-slider::-moz-range-thumb {
-    width: 1.125rem;
+    width: 0.5625rem;
     height: 2.625rem;
     border-radius: 0.5625rem;
-    background: rgba(255,255,255,0.92);
+    background: #fff;
     box-shadow: none;
     border: none;
     cursor: pointer;
   }
 
-  /* ── Brightness thumb: half-width, solid white ── */
-  .brightness-slider::-webkit-slider-thumb {
-    width: 0.5625rem;
-    background: #fff;
-  }
-  .brightness-slider::-moz-range-thumb {
-    width: 0.5625rem;
-    background: #fff;
-  }
   .dado-slider::-moz-range-track {
-    height: 3.125rem;
-    border-radius: 1.5625rem;
+    height: 3.5625rem;
+    border-radius: 1.5rem;
     border: none;
   }
 
@@ -246,34 +237,36 @@ const STYLES = /* css */ `
     background: var(--_bright-bg, rgba(127,127,127,0.3));
   }
 
-  /* ── Color-temp slider: fixed cool→warm gradient ── */
+  /* ── Color-temp slider: low→high temperature gradient ── */
   .colortemp-slider {
-    background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .colortemp-slider::-moz-range-track {
-    background: linear-gradient(to right, #aad4ff, #fff 50%, #ffcc77);
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Hue slider: rainbow ── */
   .hue-slider {
-    background: linear-gradient(to right,
-      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
-      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
-      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .hue-slider::-moz-range-track {
-    background: linear-gradient(to right,
-      hsl(0,100%,50%), hsl(45,100%,50%), hsl(90,100%,50%),
-      hsl(135,100%,50%), hsl(180,100%,50%), hsl(225,100%,50%),
-      hsl(270,100%,50%), hsl(315,100%,50%), hsl(360,100%,50%));
+    background: linear-gradient(90deg,
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Indicator button next to each slider ── */
   .ctrl-btn {
-    width: 3.125rem;
-    height: 3.125rem;
+    width: 3.5625rem;
+    height: 3.5625rem;
     border: none;
-    border-radius: 1rem;
+    border-radius: 1.5rem;
     background: var(--contrast3, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
@@ -283,7 +276,7 @@ const STYLES = /* css */ `
     cursor: default;
   }
   .ctrl-btn ha-icon {
-    --mdc-icon-size: 1.375rem;
+    --mdc-icon-size: 2.25rem;
     color: var(--contrast12, var(--secondary-text-color));
   }
 
@@ -389,6 +382,7 @@ class DadosCard extends HTMLElement {
     this._cfg = { ...DEFAULTS, ...config };
     this._expanded = false;
     this._stateKey = null;
+    this._effectiveRgb = FALLBACK_RGB;
     this._lightRgb = null;
 
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
@@ -518,14 +512,15 @@ class DadosCard extends HTMLElement {
     //   2. HA light's rgb_color / color_temp → converted to RGB
     //   3. FALLBACK_RGB  [255,218,120]  (≈ --state-light-on-color)
     //
-    // Priority for Glow (independent — CSS vars unsupported in box-shadow rgba()):
-    //   1. config.glow_color  (hex/rgb)
+    // Priority for Glow:
+    //   1. config.glow_color (or config.color) — any CSS color string
     //   2. HA light's rgb_color / color_temp → converted to RGB
     //   3. FALLBACK_RGB
     //
     // Toggle colour is independent: config.toggle_color → HA rgb_color → FALLBACK_RGB
 
     const lightRgb   = haLightRgb(state);   // may be null if no color info
+    this._lightRgb = lightRgb;
     const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
     // effectiveRgb: used for img cell background (NOT for brightness slider)
@@ -539,9 +534,15 @@ class DadosCard extends HTMLElement {
       ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 0.7))
       : 'var(--contrast3, rgba(127,127,127,0.15))';
 
-    // Glow color — separate priority chain (hex/rgb only; CSS vars can't be used in box-shadow rgba())
-    const cfgGlowRgb = parseRgb(this._cfg.glow_color);
-    const glowRgb    = cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB;
+    // Glow priority: custom color (glow_color or color) → HA rgb/color_temp → fallback RGB
+    const glowColor = (this._cfg.glow_color ?? this._cfg.color ?? '').toString().trim();
+    const cfgGlowRgb = parseRgb(glowColor);
+    const glowA = glowColor
+      ? `color-mix(in srgb, ${glowColor} 70%, transparent)`
+      : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.7);
+    const glowB = glowColor
+      ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
+      : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
     // Toggle colour
     const toggleCss = isOn
@@ -588,7 +589,7 @@ class DadosCard extends HTMLElement {
 
     s.setProperty('--dados-cell-bg',    cellBg);
     s.setProperty('--dados-glow',       (isOn && this._cfg.glow !== false)
-      ? `-55px -50px 70px 20px ${rgba(glowRgb, 0.7)}, -35px -35px 70px 10px ${rgba(glowRgb, 0.8)}`
+      ? `-55px -50px 70px 20px ${glowA}, -35px -35px 70px 10px ${glowB}`
       : 'none');
     s.setProperty('--dados-icon-color', isOn
       ? (this._cfg.icon_color     || 'var(--contrast2, #fff)')
@@ -626,10 +627,13 @@ class DadosCard extends HTMLElement {
     // Track = same base colour at 30 % alpha
     const trackCss = rgba(baseRgb, 0.3);
 
-    // Extend progress slightly past the thumb centre so the narrow thumb sits
-    // visually just inside the coloured progress end.
+    // Rounded progress segment (design like reference):
+    // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
+    // Cap radius is half of slider height (3.5625rem / 2 = 1.78125rem).
     this._el.brightSlider.style.setProperty('--_bright-bg',
-      `linear-gradient(to right, ${progCss} calc(${pct}% + 0.35rem), ${trackCss} calc(${pct}% + 0.5rem))`);
+      `linear-gradient(${trackCss}, ${trackCss}),
+       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
+       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.78125rem, transparent 1.79rem)`);
   }
 
   // ── Capability detection ───────────────────────────────────
