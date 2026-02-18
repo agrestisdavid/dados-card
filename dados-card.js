@@ -80,7 +80,7 @@ const STYLES = /* css */ `
     box-sizing: border-box;
     border-radius: 2.25rem;
     padding: 1.3125rem 1.25rem;
-    overflow: visible;
+    overflow: hidden;
     backdrop-filter: blur(20px);
     background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
@@ -107,7 +107,7 @@ const STYLES = /* css */ `
     cursor: pointer;
     border: none;
     padding: 0;
-    overflow: visible;
+    overflow: hidden;
     flex-shrink: 0;
     transition: background 0.3s, box-shadow 0.3s;
   }
@@ -182,8 +182,8 @@ const STYLES = /* css */ `
   /* Slider wrapper — clips thumb overflow at pill corners */
   .slider-wrap {
     overflow: hidden;
-    border-radius: 1.5625rem;
-    height: 3.125rem;
+    border-radius: 1.5rem;
+    height: 3.5625rem;
     display: block;
   }
 
@@ -193,8 +193,8 @@ const STYLES = /* css */ `
     appearance: none;
     display: block;
     width: 100%;
-    height: 3.125rem;
-    border-radius: 1.5625rem;
+    height: 3.5625rem;
+    border-radius: 1.5rem;
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -231,8 +231,8 @@ const STYLES = /* css */ `
     background: #fff;
   }
   .dado-slider::-moz-range-track {
-    height: 3.125rem;
-    border-radius: 1.5625rem;
+    height: 3.5625rem;
+    border-radius: 1.5rem;
     border: none;
   }
 
@@ -516,8 +516,8 @@ class DadosCard extends HTMLElement {
     //   2. HA light's rgb_color / color_temp → converted to RGB
     //   3. FALLBACK_RGB  [255,218,120]  (≈ --state-light-on-color)
     //
-    // Priority for Glow (independent — CSS vars unsupported in box-shadow rgba()):
-    //   1. config.glow_color  (hex/rgb)
+    // Priority for Glow:
+    //   1. config.glow_color (or config.color) — any CSS color string
     //   2. HA light's rgb_color / color_temp → converted to RGB
     //   3. FALLBACK_RGB
     //
@@ -535,9 +535,15 @@ class DadosCard extends HTMLElement {
       ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 0.7))
       : 'var(--contrast3, rgba(127,127,127,0.15))';
 
-    // Glow color — separate priority chain (hex/rgb only; CSS vars can't be used in box-shadow rgba())
-    const cfgGlowRgb = parseRgb(this._cfg.glow_color);
-    const glowRgb    = cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB;
+    // Glow priority: custom color (glow_color or color) → HA rgb/color_temp → fallback RGB
+    const glowColor = (this._cfg.glow_color ?? this._cfg.color ?? '').toString().trim();
+    const cfgGlowRgb = parseRgb(glowColor);
+    const glowA = glowColor
+      ? `color-mix(in srgb, ${glowColor} 70%, transparent)`
+      : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.7);
+    const glowB = glowColor
+      ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
+      : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
     // Toggle colour
     const toggleCss = isOn
@@ -584,7 +590,7 @@ class DadosCard extends HTMLElement {
 
     s.setProperty('--dados-cell-bg',    cellBg);
     s.setProperty('--dados-glow',       (isOn && this._cfg.glow !== false)
-      ? `-55px -50px 70px 20px ${rgba(glowRgb, 0.7)}, -35px -35px 70px 10px ${rgba(glowRgb, 0.8)}`
+      ? `-55px -50px 70px 20px ${glowA}, -35px -35px 70px 10px ${glowB}`
       : 'none');
     s.setProperty('--dados-icon-color', isOn
       ? (this._cfg.icon_color     || 'var(--contrast2, #fff)')
@@ -621,10 +627,13 @@ class DadosCard extends HTMLElement {
     // Track = same color as progress at 30% alpha
     const trackCss = rgba(baseRgb, 0.3);
 
-    // Extend progress ~5 px past the thumb centre so the narrow thumb sits
-    // visually just inside (behind) the coloured progress end.
+    // Rounded progress segment (design like reference):
+    // layer 1 = full track, layer 2 = progress body, layer 3 = full-height round cap.
+    // Cap radius is half of slider height (3.5625rem / 2 = 1.78125rem).
     this._el.brightSlider.style.setProperty('--_bright-bg',
-      `linear-gradient(to right, ${progCss} calc(${pct}% + 0.35rem), ${trackCss} calc(${pct}% + 0.5rem))`);
+      `linear-gradient(${trackCss}, ${trackCss}),
+       linear-gradient(to right, ${progCss} ${pct}%, transparent ${pct}%),
+       radial-gradient(circle at ${pct}% 50%, ${progCss} 0 1.78125rem, transparent 1.79rem)`);
   }
 
   // ── Capability detection ───────────────────────────────────
