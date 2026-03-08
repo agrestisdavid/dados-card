@@ -40,9 +40,9 @@ function parseRgb(color) {
   return m ? [+m[1], +m[2], +m[3]] : null;
 }
 
-/** Simplified Tanner-Helland algorithm: mireds → [r,g,b]. */
-function miredsToRgb(mireds) {
-  const t = (1_000_000 / mireds) / 100;
+/** Simplified Tanner-Helland algorithm: Kelvin → [r,g,b]. */
+function kelvinToRgb(kelvin) {
+  const t = kelvin / 100;
   const r = t <= 66 ? 255 : clamp(Math.round(329.698727 * Math.pow(t - 60, -0.13320476)), 0, 255);
   const g = t <= 66
     ? clamp(Math.round(99.4708025 * Math.log(t) - 161.1195681), 0, 255)
@@ -54,7 +54,7 @@ function miredsToRgb(mireds) {
 /** Extract the light's current RGB from state attributes. */
 function haLightRgb(stateObj) {
   if (stateObj.attributes.rgb_color) return [...stateObj.attributes.rgb_color];
-  if (typeof stateObj.attributes.color_temp === 'number') return miredsToRgb(stateObj.attributes.color_temp);
+  if (typeof stateObj.attributes.color_temp_kelvin === 'number') return kelvinToRgb(stateObj.attributes.color_temp_kelvin);
   return null; // signal "no color info"
 }
 
@@ -507,7 +507,7 @@ class DadosCard extends HTMLElement {
     const key = [
       state.state,
       state.attributes.brightness   ?? '',
-      state.attributes.color_temp   ?? '',
+      state.attributes.color_temp_kelvin ?? '',
       state.attributes.rgb_color    ?? '',
       hs[0] ?? '',
     ].join('|');
@@ -532,12 +532,12 @@ class DadosCard extends HTMLElement {
     //
     // Priority for Img Cell:
     //   1. config.color  (user override, hex/rgb or CSS var)
-    //   2. HA light's rgb_color / color_temp → converted to RGB
+    //   2. HA light's rgb_color / color_temp_kelvin → converted to RGB
     //   3. FALLBACK_RGB  [255,218,120]  (≈ --state-light-on-color)
     //
     // Priority for Glow:
     //   1. config.glow_color (or config.color) — any CSS color string
-    //   2. HA light's rgb_color / color_temp → converted to RGB
+    //   2. HA light's rgb_color / color_temp_kelvin → converted to RGB
     //   3. FALLBACK_RGB
     //
     // Toggle colour is independent: config.toggle_color → HA rgb_color → FALLBACK_RGB
@@ -590,11 +590,11 @@ class DadosCard extends HTMLElement {
       this._setBrightnessProgress(bv);
     }
     if (hasCT) {
-      const minM = state.attributes.min_mireds ?? 153;
-      const maxM = state.attributes.max_mireds ?? 500;
-      this._el.ctSlider.min   = minM;
-      this._el.ctSlider.max   = maxM;
-      this._el.ctSlider.value = state.attributes.color_temp ?? minM;
+      const minK = state.attributes.min_color_temp_kelvin ?? 2000;
+      const maxK = state.attributes.max_color_temp_kelvin ?? 6535;
+      this._el.ctSlider.min   = minK;
+      this._el.ctSlider.max   = maxK;
+      this._el.ctSlider.value = state.attributes.color_temp_kelvin ?? minK;
     }
     if (hasColor) {
       this._el.hueSlider.value = state.attributes.hs_color?.[0] ?? 180;
@@ -710,7 +710,7 @@ class DadosCard extends HTMLElement {
 
     ctSlider.addEventListener('change', e => {
       e.stopPropagation();
-      this._call('turn_on', { color_temp: +e.target.value });
+      this._call('turn_on', { color_temp_kelvin: +e.target.value });
     });
 
     hueSlider.addEventListener('change', e => {
