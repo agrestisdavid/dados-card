@@ -253,17 +253,16 @@ const STYLES = /* css */ `
     background: transparent;
   }
 
-  /* ── Color-temp slider: warm (left) → cool (right) ── */
+  /* ── Color-temp slider: cool (left) → warm (right) ── */
   .colortemp-slider {
-    direction: rtl;
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Hue slider: full hue rainbow (muted) ── */
@@ -609,9 +608,10 @@ class DadosCard extends HTMLElement {
     if (hasCT) {
       const minK = state.attributes.min_color_temp_kelvin ?? 2000;
       const maxK = state.attributes.max_color_temp_kelvin ?? 6535;
+      const curK = state.attributes.color_temp_kelvin ?? minK;
       this._el.ctSlider.min   = minK;
       this._el.ctSlider.max   = maxK;
-      this._el.ctSlider.value = state.attributes.color_temp_kelvin ?? minK;
+      this._el.ctSlider.value = minK + maxK - curK;
     }
     if (hasColor) {
       this._el.hueSlider.value = state.attributes.hs_color?.[0] ?? 180;
@@ -727,7 +727,8 @@ class DadosCard extends HTMLElement {
 
     ctSlider.addEventListener('change', e => {
       e.stopPropagation();
-      this._call('turn_on', { color_temp_kelvin: +e.target.value });
+      const min = +ctSlider.min, max = +ctSlider.max;
+      this._call('turn_on', { color_temp_kelvin: min + max - +e.target.value });
     });
 
     hueSlider.addEventListener('change', e => {
