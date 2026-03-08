@@ -103,12 +103,12 @@ const STYLES = /* css */ `
     cursor: pointer;
     border: none;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
     flex-shrink: 0;
     transition: background 0.3s, box-shadow 0.3s;
   }
 
-  .icon-tile ha-icon {
+  .icon-tile ha-icon:not(.fav-badge) {
     --mdc-icon-size: 2.25rem;
     color: var(--dados-icon-color, var(--contrast2, #fff));
     transition: color 0.3s;
@@ -140,16 +140,12 @@ const STYLES = /* css */ `
   }
 
   /* ── Fav heart badge on icon tile ────────────────────────────── */
-  .icon-tile {
-    position: relative;
-  }
-
   .fav-badge {
     position: absolute;
-    bottom: -0.2rem;
-    right: -0.2rem;
+    top: -0.25rem;
+    right: -0.25rem;
     --mdc-icon-size: 1rem;
-    color: var(--red, #e53935);
+    color: var(--dados-fav-color, rgb(255, 145, 138));
     filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
     pointer-events: none;
     transition: opacity 0.2s;
@@ -313,6 +309,7 @@ const EDITOR_SCHEMA = [
       { name: 'button_background',    label: 'Toggle & Slider-Icons Hintergrund',               selector: { text: {} } },
       { name: 'slider_icon_color',    label: 'Slider-Icons Farbe',                             selector: { text: {} } },
       { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
+      { name: 'fav_color',            label: 'Herz-Farbe (Standard: rgb(255,145,138))',          selector: { text: {} } },
     ],
   },
   {
@@ -569,8 +566,9 @@ class DadosCard extends HTMLElement {
       ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
       : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
-    // Fav badge visibility
+    // Fav badge visibility + color
     this._el.favBadge.classList.toggle('hidden', !hasFav);
+    this._setProp(this._el.card.style, '--dados-fav-color', this._cfg.fav_color);
 
     // ── Text ───────────────────────────────────────────────
     this._el.nameEl.textContent =
