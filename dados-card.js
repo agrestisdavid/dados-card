@@ -256,13 +256,13 @@ const STYLES = /* css */ `
   /* ── Color-temp slider: warm (left) → cool (right) ── */
   .colortemp-slider {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
+      rgba(var(--temperature-high-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-low-rgb, 255, 175, 131), 1) 100%);
   }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
+      rgba(var(--temperature-high-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-low-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Hue slider: full hue rainbow (muted) ── */
