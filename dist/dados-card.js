@@ -5,8 +5,9 @@ const CARD_VERSION = '1.6.0';
 const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
-  toggle_icon_on:  'mdi:toggle-switch',
-  toggle_icon_off: 'mdi:toggle-switch-off-outline',
+  brightness_icon: 'mdi:brightness-percent',
+  color_temp_icon: 'mdi:thermometer',
+  hue_icon:        'mdi:palette',
   hold_ms:         500,
   glow:            true,
 };
@@ -83,7 +84,7 @@ const STYLES = /* css */ `
   /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
-    grid-template-columns: 2.8125rem 1fr auto;
+    grid-template-columns: 3.375rem 1fr;
     align-items: center;
     gap: 0.625rem;
     flex-shrink: 0;
@@ -91,9 +92,9 @@ const STYLES = /* css */ `
 
   /* ── Icon tile ───────────────────────────────────────────────── */
   .icon-tile {
-    width: 2.8125rem;
-    height: 2.8125rem;
-    border-radius: var(--dados-cell-radius, 1.125rem);
+    width: 3.375rem;
+    height: 3.375rem;
+    border-radius: var(--dados-cell-radius, 1.375rem);
     background: var(--dados-cell-bg, rgba(127,127,127,0.15));
     box-shadow: var(--dados-glow, none);
     display: flex;
@@ -119,7 +120,7 @@ const STYLES = /* css */ `
   .name {
     font-size: var(--dados-name-fs, 1rem);
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1.15;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -131,31 +132,31 @@ const STYLES = /* css */ `
   .state {
     font-size: var(--dados-state-fs, 0.875rem);
     font-weight: 400;
+    line-height: 1.15;
+    margin-top: -0.0625rem;
     color: var(--dados-state-color, var(--contrast12, var(--secondary-text-color)));
     letter-spacing: 0.0375rem;
     padding-left: 0.1875rem;
   }
 
-  /* ── Toggle button ───────────────────────────────────────────── */
-  .toggle-btn {
-    width: 3.5625rem;
-    height: 3.5625rem;
-    border: none;
-    border-radius: var(--dados-toggle-radius, 1.5rem);
-    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-    transition: background 0.2s;
+  /* ── Fav heart badge on icon tile ────────────────────────────── */
+  .icon-tile {
+    position: relative;
   }
 
-  .toggle-btn ha-icon {
-    --mdc-icon-size: 2.25rem;
-    color: var(--dados-toggle-color, var(--secondary-text-color));
-    transition: color 0.2s;
+  .fav-badge {
+    position: absolute;
+    bottom: -0.2rem;
+    right: -0.2rem;
+    --mdc-icon-size: 1rem;
+    color: var(--red, #e53935);
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .fav-badge.hidden {
+    display: none;
   }
 
   /* ── Slider controls ─────────────────────────────────────────── */
@@ -230,6 +231,7 @@ const STYLES = /* css */ `
     border: none;
     cursor: pointer;
   }
+
   .dado-slider::-moz-range-track {
     height: 3.5625rem;
     border-radius: var(--dados-slider-radius, 1.5rem);
@@ -305,7 +307,6 @@ const EDITOR_SCHEMA = [
     schema: [
       { name: 'color',                label: 'Farbe — Img Cell (Standard: Lichtfarbe)',         selector: { text: {} } },
       { name: 'glow_color',           label: 'Glow-Farbe (Standard: Lichtfarbe)',               selector: { text: {} } },
-      { name: 'toggle_color',         label: 'Toggle Color',                                    selector: { text: {} } },
       { name: 'icon_color',           label: 'Icon-Farbe wenn an',                              selector: { text: {} } },
       { name: 'icon_color_off',       label: 'Icon-Farbe wenn aus',                             selector: { text: {} } },
       { name: 'brightness_color',     label: 'Brightness Slider Farbe',                         selector: { text: {} } },
@@ -317,10 +318,11 @@ const EDITOR_SCHEMA = [
   {
     type: 'expandable', title: 'Icons',
     schema: [
-      { name: 'icon_on',        label: 'Icon (An)',         selector: { icon: {} } },
-      { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
-      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
+      { name: 'icon_on',        label: 'Icon (An)',              selector: { icon: {} } },
+      { name: 'icon_off',       label: 'Icon (Aus)',             selector: { icon: {} } },
+      { name: 'brightness_icon',label: 'Helligkeit Slider Icon', selector: { icon: {} } },
+      { name: 'color_temp_icon',label: 'Farbtemperatur Slider Icon', selector: { icon: {} } },
+      { name: 'hue_icon',       label: 'Farbe (Hue) Slider Icon', selector: { icon: {} } },
     ],
   },
   {
@@ -430,14 +432,12 @@ class DadosCard extends HTMLElement {
         <div class="row">
           <button class="icon-tile" id="iconBtn" aria-label="Toggle">
             <ha-icon id="iconEl"></ha-icon>
+            <ha-icon class="fav-badge hidden" id="favBadge" icon="mdi:heart"></ha-icon>
           </button>
           <div class="text" id="textBlock">
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle">
-            <ha-icon id="toggleIconEl"></ha-icon>
-          </button>
         </div>
         <div class="controls hidden" id="controls">
           <div class="slider-row" id="brightRow">
@@ -448,7 +448,7 @@ class DadosCard extends HTMLElement {
                      type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon icon="mdi:brightness-percent"></ha-icon>
+              <ha-icon id="brightIcon"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="ctRow">
@@ -457,7 +457,7 @@ class DadosCard extends HTMLElement {
                      type="range" step="1" aria-label="Farbtemperatur"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon icon="mdi:thermometer"></ha-icon>
+              <ha-icon id="ctIcon"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="hueRow">
@@ -466,7 +466,7 @@ class DadosCard extends HTMLElement {
                      type="range" min="0" max="360" step="1" aria-label="Farbe"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon icon="mdi:palette"></ha-icon>
+              <ha-icon id="hueIcon"></ha-icon>
             </button>
           </div>
         </div>
@@ -477,13 +477,13 @@ class DadosCard extends HTMLElement {
       card:         this.shadowRoot.querySelector('ha-card'),
       iconBtn:      $('iconBtn'),   iconEl:      $('iconEl'),
       nameEl:       $('nameEl'),    stateEl:     $('stateEl'),
-      toggleBtn:    $('toggleBtn'), toggleIconEl:$('toggleIconEl'),
+      favBadge:     $('favBadge'),
       textBlock:    $('textBlock'),
       controls:     $('controls'),
-      brightRow:    $('brightRow'), brightSlider:$('brightSlider'),
+      brightRow:    $('brightRow'), brightSlider:$('brightSlider'), brightIcon: $('brightIcon'),
       brightTrack:  $('brightTrack'), brightProgress: $('brightProgress'),
-      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),
-      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),
+      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),     ctIcon:     $('ctIcon'),
+      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),    hueIcon:    $('hueIcon'),
     };
     this._bindEvents();
   }
@@ -504,12 +504,14 @@ class DadosCard extends HTMLElement {
     }
 
     const hs  = state.attributes.hs_color ?? [];
+    const hasFav = this._hass.entities?.[this._cfg.entity]?.labels?.includes('fav') ?? false;
     const key = [
       state.state,
       state.attributes.brightness   ?? '',
       state.attributes.color_temp_kelvin ?? '',
       state.attributes.rgb_color    ?? '',
       hs[0] ?? '',
+      hasFav,
     ].join('|');
     if (key === this._stateKey) return;
     this._stateKey = key;
@@ -546,9 +548,11 @@ class DadosCard extends HTMLElement {
     this._lightRgb = lightRgb;
     const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
-    // effectiveRgb: used for brightness gradient fallback
+    // effectiveRgb: used for img cell background (NOT for brightness slider)
     const effectiveRgb = cfgRgb ?? lightRgb ?? FALLBACK_RGB;
-    this._effectiveRgb = effectiveRgb;       // stored for real-time brightness updates
+    // lightRgb stored separately so the brightness slider can fall back to the
+    // entity's actual colour without being polluted by config.color (img cell).
+    this._lightRgb = lightRgb;
 
     // Cell background — supports CSS vars in config.color
     const cellBg = isOn
@@ -565,10 +569,8 @@ class DadosCard extends HTMLElement {
       ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
       : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
-    // Toggle colour
-    const toggleCss = isOn
-      ? (this._cfg.toggle_color ?? (lightRgb ? rgbCss(lightRgb) : rgbCss(FALLBACK_RGB)))
-      : 'var(--secondary-text-color)';
+    // Fav badge visibility
+    this._el.favBadge.classList.toggle('hidden', !hasFav);
 
     // ── Text ───────────────────────────────────────────────
     this._el.nameEl.textContent =
@@ -580,8 +582,10 @@ class DadosCard extends HTMLElement {
     const iconOn  = this._cfg.icon_on  || DEFAULTS.icon_on;
     const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
     this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
-    this._el.toggleIconEl.setAttribute('icon',
-      isOn ? this._cfg.toggle_icon_on : this._cfg.toggle_icon_off);
+    // Slider icons — configurable, fallback to DEFAULTS
+    this._el.brightIcon.setAttribute('icon', this._cfg.brightness_icon || DEFAULTS.brightness_icon);
+    this._el.ctIcon.setAttribute('icon',     this._cfg.color_temp_icon || DEFAULTS.color_temp_icon);
+    this._el.hueIcon.setAttribute('icon',    this._cfg.hue_icon        || DEFAULTS.hue_icon);
 
     // ── Slider values ──────────────────────────────────────
     if (hasBright) {
@@ -610,7 +614,7 @@ class DadosCard extends HTMLElement {
     s.setProperty('--dados-icon-color', isOn
       ? (this._cfg.icon_color     || 'var(--contrast2, #fff)')
       : (this._cfg.icon_color_off || 'var(--contrast16, #888)'));
-    s.setProperty('--dados-toggle-color', toggleCss);
+
 
     // Font sizes
     this._setProp(s, '--dados-name-fs',    this._cfg.name_font_size);
@@ -687,9 +691,7 @@ class DadosCard extends HTMLElement {
   // ── Event binding (once) ───────────────────────────────────
 
   _bindEvents() {
-    const { toggleBtn, textBlock, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
-
-    toggleBtn.addEventListener('click', e => { e.stopPropagation(); this._toggle(); });
+    const { textBlock, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
 
     textBlock.addEventListener('click', () => {
       const state = this._hass?.states[this._cfg.entity];
@@ -725,14 +727,16 @@ class DadosCard extends HTMLElement {
   // ── Hold/tap on icon tile ──────────────────────────────────
 
   _bindHoldTap(btn) {
-    let timer = null;
+    let holdTimer = null;
     let held  = false;
+    let tapTimer = null;
+    let tapCount = 0;
 
     const start = () => {
       held  = false;
-      timer = setTimeout(() => { held = true; timer = null; this._moreInfo(); }, this._cfg.hold_ms);
+      holdTimer = setTimeout(() => { held = true; holdTimer = null; this._moreInfo(); }, this._cfg.hold_ms);
     };
-    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    const cancel = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
 
     btn.addEventListener('mousedown',   start);
     btn.addEventListener('touchstart',  start, { passive: true });
@@ -740,13 +744,47 @@ class DadosCard extends HTMLElement {
     btn.addEventListener('mouseleave',  cancel);
     btn.addEventListener('touchend',    cancel);
     btn.addEventListener('touchcancel', cancel);
-    btn.addEventListener('click', () => { if (held) { held = false; return; } this._toggle(); });
+    btn.addEventListener('click', () => {
+      if (held) { held = false; return; }
+      tapCount++;
+      if (tapCount === 1) {
+        tapTimer = setTimeout(() => { tapCount = 0; this._toggle(); }, 250);
+      } else if (tapCount === 2) {
+        clearTimeout(tapTimer);
+        tapCount = 0;
+        this._toggleFav();
+      }
+    });
   }
 
   // ── HA service helpers ─────────────────────────────────────
 
   _toggle() {
     this._call('toggle');
+  }
+
+  async _toggleFav() {
+    const entityId = this._cfg.entity;
+    const conn = this._hass.connection;
+    try {
+      const entry = await conn.sendMessagePromise({
+        type: 'config/entity_registry/get',
+        entity_id: entityId,
+      });
+      const labels = entry.labels || [];
+      const hasFav = labels.includes('fav');
+      const newLabels = hasFav ? labels.filter(l => l !== 'fav') : [...labels, 'fav'];
+      await conn.sendMessagePromise({
+        type: 'config/entity_registry/update',
+        entity_id: entityId,
+        labels: newLabels,
+      });
+      // Immediately update badge visibility
+      this._el.favBadge.classList.toggle('hidden', hasFav);
+      this._stateKey = null; // force re-render on next update
+    } catch (e) {
+      console.warn('dados-card: failed to toggle fav label', e);
+    }
   }
 
   _call(service, data = {}) {
