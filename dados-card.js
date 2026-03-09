@@ -592,8 +592,9 @@ class DadosCard extends HTMLElement {
       ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
       : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
-    // Favorite icon visibility from config (independent from label state)
-    const showFav = this._cfg.show_fav !== false;
+    // Favorite icon visibility: only if enabled in config and label is set
+    const isFavorite = this._entityHasLabel();
+    const showFav = this._cfg.show_fav !== false && isFavorite;
     const toggleCss = 'rgb(255, 145, 138)';
 
     // ── Text ───────────────────────────────────────────────
