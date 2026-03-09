@@ -147,8 +147,8 @@ const STYLES = /* css */ `
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
     position: absolute;
-    top: -0.75rem;
-    right: -0.75rem;
+    top: -0.6rem;
+    right: -0.6rem;
     width: 1.5rem;
     height: 1.5rem;
     border: none;
