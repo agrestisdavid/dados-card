@@ -5,8 +5,9 @@ const CARD_VERSION = '1.6.0';
 const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
-  toggle_icon_on:  'mdi:toggle-switch',
-  toggle_icon_off: 'mdi:toggle-switch-off-outline',
+  toggle_icon_on:  'mdi:heart',
+  toggle_icon_off: 'mdi:heart',
+  favorite_label:  'fav',
   brightness_icon: 'mdi:brightness-percent',
   color_temp_icon: 'mdi:thermometer',
   hue_icon:        'mdi:palette',
@@ -519,6 +520,7 @@ class DadosCard extends HTMLElement {
       state.attributes.color_temp_kelvin ?? '',
       state.attributes.rgb_color    ?? '',
       hs[0] ?? '',
+      this._entityHasLabel() ? 'fav:1' : 'fav:0',
     ].join('|');
     if (key === this._stateKey) return;
     this._stateKey = key;
@@ -549,7 +551,7 @@ class DadosCard extends HTMLElement {
     //   2. HA light's rgb_color / color_temp_kelvin → converted to RGB
     //   3. FALLBACK_RGB
     //
-    // Toggle colour is independent: config.toggle_color → HA rgb_color → FALLBACK_RGB
+    // Favorite heart colour reflects the configured label state
 
     const lightRgb   = haLightRgb(state);   // may be null if no color info
     this._lightRgb = lightRgb;
@@ -576,10 +578,9 @@ class DadosCard extends HTMLElement {
       ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
       : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
-    // Toggle colour
-    const toggleCss = isOn
-      ? (this._cfg.toggle_color ?? (lightRgb ? rgbCss(lightRgb) : rgbCss(FALLBACK_RGB)))
-      : 'var(--secondary-text-color)';
+    // Favorite state from entity registry labels
+    const isFavorite = this._entityHasLabel();
+    const toggleCss = isFavorite ? 'rgb(255, 145, 138)' : '#898C94';
 
     // ── Text ───────────────────────────────────────────────
     this._el.nameEl.textContent =
@@ -591,9 +592,7 @@ class DadosCard extends HTMLElement {
     const iconOn  = this._cfg.icon_on  || DEFAULTS.icon_on;
     const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
     this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
-    this._el.toggleIconEl.setAttribute('icon',
-      isOn ? (this._cfg.toggle_icon_on  || DEFAULTS.toggle_icon_on)
-           : (this._cfg.toggle_icon_off || DEFAULTS.toggle_icon_off));
+    this._el.toggleIconEl.setAttribute('icon', 'mdi:heart');
     // Slider icons — configurable, fallback to DEFAULTS
     this._el.brightIcon.setAttribute('icon', this._cfg.brightness_icon || DEFAULTS.brightness_icon);
     this._el.ctIcon.setAttribute('icon',     this._cfg.color_temp_icon || DEFAULTS.color_temp_icon);
@@ -706,7 +705,7 @@ class DadosCard extends HTMLElement {
   _bindEvents() {
     const { toggleBtn, textBlock, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
 
-    toggleBtn.addEventListener('click', e => { e.stopPropagation(); this._toggle(); });
+    toggleBtn.addEventListener('click', e => { e.stopPropagation(); this._toggleFavorite(); });
 
     textBlock.addEventListener('click', () => {
       const state = this._hass?.states[this._cfg.entity];
@@ -765,6 +764,32 @@ class DadosCard extends HTMLElement {
 
   _toggle() {
     this._call('toggle');
+  }
+
+
+  _entityHasLabel() {
+    const entityId = this._cfg?.entity;
+    const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
+    const labels = this._hass?.entities?.[entityId]?.labels;
+    return Array.isArray(labels) && labels.includes(label);
+  }
+
+  _toggleFavorite() {
+    const entityId = this._cfg?.entity;
+    if (!entityId) return;
+
+    const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
+    const service = this._entityHasLabel()
+      ? 'remove_label_from_entity'
+      : 'add_label_to_entity';
+
+    this._hass.callService('homeassistant', service, {
+      entity_id: entityId,
+      label_id: label,
+    });
+
+    this._stateKey = null;
+    this._update();
   }
 
   _call(service, data = {}) {

@@ -1,10 +1,10 @@
 dados_toggle:
   variables:
-    entity: null                      # Target entity to toggle (light.*, switch.*, input_boolean.*, etc.)
-    img_cell_background: var(--yellow)# Fallback “ON color” if entity has no rgb_color
+    entity: null                      # Target entity for favorite label toggle
+    favorite_label: fav               # Label id/name that marks an entity as favorite
 
-  # Default icon (changes to toggle-on in ON state below)
-  icon: m3o:toggle-off
+  # Heart icon indicates if the entity currently has the favorite label
+  icon: mdi:heart
 
   # This is a pure toggle button (no name/state text)
   show_name: false
@@ -12,37 +12,21 @@ dados_toggle:
 
   entity: '[[[ return variables.entity ]]]'
 
-  # Tap toggles the entity:
-  # - If it's a light -> light.toggle
-  # - If it's a switch -> switch.toggle
-  # - Otherwise -> homeassistant.toggle (generic)
+  # Tap toggles the favorite label on the entity
   tap_action:
     action: call-service
     service: |
       [[[
-        const id = variables?.entity || '';
-        if (id.startsWith('light.')) return 'light.toggle';
-        if (id.startsWith('switch.')) return 'switch.toggle';
-        return 'homeassistant.toggle';
+        const id = variables?.entity;
+        const label = variables?.favorite_label || 'fav';
+        const labels = hass?.entities?.[id]?.labels || [];
+        return labels.includes(label)
+          ? 'homeassistant.remove_label_from_entity'
+          : 'homeassistant.add_label_to_entity';
       ]]]
-    target:
+    data:
       entity_id: '[[[ return variables.entity ]]]'
-
-  state:
-    # ON state:
-    # - icon changes to toggle-on
-    # - icon color uses the entity’s rgb_color when available (lights),
-    #   otherwise falls back to variables.img_cell_background
-    - value: "on"
-      icon: m3o:toggle-on
-      styles:
-        icon:
-          - color: |
-              [[[
-                const c = entity?.attributes?.rgb_color;
-                if (c) return `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.7)`;
-                return variables?.img_cell_background || 'var(--yellow)';
-              ]]]
+      label_id: '[[[ return variables?.favorite_label || "fav" ]]]'
 
   styles:
     # Outer button container (transparent, just holds the tile)
@@ -63,6 +47,13 @@ dados_toggle:
     icon:
       - height: 30px
       - width: 30px
+      - color: |
+          [[[
+            const id = variables?.entity;
+            const label = variables?.favorite_label || 'fav';
+            const labels = hass?.entities?.[id]?.labels || [];
+            return labels.includes(label) ? 'rgb(255, 145, 138)' : '#898C94';
+          ]]]
 
   extra_styles: |
     /* Disable ripple for a clean chip look */
