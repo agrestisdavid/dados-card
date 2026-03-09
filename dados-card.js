@@ -271,23 +271,24 @@ const STYLES = /* css */ `
       hsl(360,65%,55%) 100%);
   }
 
-  /* ── Indicator button next to each slider ── */
+  /* ── Indicator button next to each slider (matches icon-tile) ── */
   .ctrl-btn {
     width: 3.375rem;
     height: 3.375rem;
     border: none;
     border-radius: var(--dados-cell-radius, 1.375rem);
-    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
+    background: var(--dados-cell-bg, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     flex-shrink: 0;
     cursor: default;
+    transition: background 0.3s;
   }
   .ctrl-btn ha-icon {
     --mdc-icon-size: 2.25rem;
-    color: var(--dados-ctrl-icon-color, var(--contrast12, var(--secondary-text-color)));
+    color: var(--dados-icon-color, var(--contrast2, #fff));
   }
 
   .hidden { display: none !important; }
