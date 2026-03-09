@@ -150,8 +150,7 @@ const STYLES = /* css */ `
     right: -0.35rem;
     width: 1.8rem;
     height: 1.8rem;
-    border: 0.125rem solid var(--dados-icon-color, var(--contrast2, #fff));
-    border-radius: 50%;
+    border: none;
     background: transparent;
     display: flex;
     align-items: center;
