@@ -68,6 +68,7 @@ const STYLES = /* css */ `
   }
 
   ha-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 5rem;
@@ -82,8 +83,9 @@ const STYLES = /* css */ `
   /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
-    grid-template-columns: 2.8125rem 1fr auto;
+    grid-template-columns: 2.8125rem 1fr;
     align-items: center;
+    padding-right: 1.75rem;
     gap: 0.625rem;
     flex-shrink: 0;
   }
@@ -137,22 +139,23 @@ const STYLES = /* css */ `
 
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
-    width: 3.5625rem;
-    height: 3.5625rem;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border: none;
-    border-radius: var(--dados-toggle-radius, 1.5rem);
-    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    flex-shrink: 0;
-    transition: background 0.2s;
+    z-index: 2;
   }
 
   .toggle-btn ha-icon {
-    --mdc-icon-size: 2.25rem;
+    --mdc-icon-size: 1.125rem;
     color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
   }
