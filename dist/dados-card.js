@@ -166,7 +166,7 @@ const STYLES = /* css */ `
 
   .slider-row {
     display: grid;
-    grid-template-columns: 1fr 3.5625rem;
+    grid-template-columns: 1fr 3.375rem;
     gap: 0.5rem;
     align-items: center;
   }
@@ -176,7 +176,7 @@ const STYLES = /* css */ `
     position: relative;
     overflow: hidden;
     border-radius: var(--dados-slider-radius, 1.5rem);
-    height: 3.5625rem;
+    height: 3.375rem;
     display: block;
   }
 
@@ -200,8 +200,8 @@ const STYLES = /* css */ `
     appearance: none;
     display: block;
     width: 100%;
-    height: 3.5625rem;
-    border-radius: var(--dados-slider-radius, 1.5rem);
+    height: 3.375rem;
+    border-radius: var(--dados-slider-radius, 1.375rem);
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -229,8 +229,8 @@ const STYLES = /* css */ `
   }
 
   .dado-slider::-moz-range-track {
-    height: 3.5625rem;
-    border-radius: var(--dados-slider-radius, 1.5rem);
+    height: 3.375rem;
+    border-radius: var(--dados-slider-radius, 1.375rem);
     border: none;
   }
 
@@ -273,10 +273,10 @@ const STYLES = /* css */ `
 
   /* ── Indicator button next to each slider ── */
   .ctrl-btn {
-    width: 3.5625rem;
-    height: 3.5625rem;
+    width: 3.375rem;
+    height: 3.375rem;
     border: none;
-    border-radius: var(--dados-toggle-radius, 1.5rem);
+    border-radius: var(--dados-cell-radius, 1.375rem);
     background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
     display: flex;
     align-items: center;
