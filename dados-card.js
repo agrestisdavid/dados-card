@@ -88,6 +88,7 @@ const STYLES = /* css */ `
     display: grid;
     grid-template-columns: 3.375rem 1fr;
     align-items: center;
+    padding-right: 1.75rem;
     gap: 0.625rem;
     flex-shrink: 0;
   }
@@ -150,10 +151,10 @@ const STYLES = /* css */ `
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
     position: absolute;
-    top: -0.2rem;
-    right: -0.2rem;
-    width: 1.5rem;
-    height: 1.5rem;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border: none;
     background: transparent;
     display: flex;
@@ -454,6 +455,9 @@ class DadosCard extends HTMLElement {
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
+          <button class="toggle-btn" id="toggleBtn" aria-label="Favorite">
+            <ha-icon id="toggleIconEl"></ha-icon>
+          </button>
         </div>
         <div class="controls hidden" id="controls">
           <div class="slider-row" id="brightRow">
