@@ -584,7 +584,7 @@ class DadosCard extends HTMLElement {
     // Favorite icon visibility: only if enabled in config and label is set
     const isFavorite = this._entityHasLabel();
     const showFav = this._cfg.show_fav !== false && isFavorite;
-    const toggleCss = 'rgb(255, 145, 138)';
+    const toggleCss = this._cfg.toggle_color || 'rgb(255, 145, 138)';
 
     // ── Text ───────────────────────────────────────────────
     this._el.nameEl.textContent =
