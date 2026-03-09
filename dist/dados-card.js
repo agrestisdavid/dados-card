@@ -5,8 +5,6 @@ const CARD_VERSION = '1.6.0';
 const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
-  toggle_icon_on:  'mdi:heart',
-  toggle_icon_off: 'mdi:heart',
   favorite_label:  'fav',
   hold_ms:         500,
   glow:            true,
@@ -70,6 +68,7 @@ const STYLES = /* css */ `
   }
 
   ha-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 5rem;
@@ -84,10 +83,16 @@ const STYLES = /* css */ `
   /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
-    grid-template-columns: 2.8125rem 1fr auto;
+    grid-template-columns: 2.8125rem 1fr;
     align-items: center;
     gap: 0.625rem;
     flex-shrink: 0;
+  }
+
+  .icon-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
   }
 
   /* ── Icon tile ───────────────────────────────────────────────── */
@@ -139,22 +144,23 @@ const STYLES = /* css */ `
 
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
-    width: 3.5625rem;
-    height: 3.5625rem;
+    position: absolute;
+    top: -0.35rem;
+    right: -0.35rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border: none;
-    border-radius: var(--dados-toggle-radius, 1.5rem);
-    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    flex-shrink: 0;
-    transition: background 0.2s;
+    z-index: 2;
   }
 
   .toggle-btn ha-icon {
-    --mdc-icon-size: 2.25rem;
+    --mdc-icon-size: 1.125rem;
     color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
   }
@@ -320,8 +326,6 @@ const EDITOR_SCHEMA = [
     schema: [
       { name: 'icon_on',        label: 'Icon (An)',         selector: { icon: {} } },
       { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
-      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
     ],
   },
   {
@@ -429,16 +433,18 @@ class DadosCard extends HTMLElement {
       <style>${STYLES}</style>
       <ha-card>
         <div class="row">
-          <button class="icon-tile" id="iconBtn" aria-label="Toggle">
-            <ha-icon id="iconEl"></ha-icon>
-          </button>
+          <div class="icon-wrap">
+            <button class="icon-tile" id="iconBtn" aria-label="Toggle">
+              <ha-icon id="iconEl"></ha-icon>
+            </button>
+            <button class="toggle-btn" id="toggleBtn" aria-label="Favorite">
+              <ha-icon id="toggleIconEl"></ha-icon>
+            </button>
+          </div>
           <div class="text" id="textBlock">
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle">
-            <ha-icon id="toggleIconEl"></ha-icon>
-          </button>
         </div>
         <div class="controls hidden" id="controls">
           <div class="slider-row" id="brightRow">
@@ -727,14 +733,27 @@ class DadosCard extends HTMLElement {
   // ── Hold/tap on icon tile ──────────────────────────────────
 
   _bindHoldTap(btn) {
-    let timer = null;
-    let held  = false;
+    let holdTimer  = null;
+    let tapTimer   = null;
+    let held       = false;
+    const dblMs    = 250;
 
     const start = () => {
-      held  = false;
-      timer = setTimeout(() => { held = true; timer = null; this._moreInfo(); }, this._cfg.hold_ms);
+      held = false;
+      holdTimer = setTimeout(() => {
+        held = true;
+        holdTimer = null;
+        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+        this._moreInfo();
+      }, this._cfg.hold_ms);
     };
-    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+
+    const cancel = () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+    };
 
     btn.addEventListener('mousedown',   start);
     btn.addEventListener('touchstart',  start, { passive: true });
@@ -742,7 +761,22 @@ class DadosCard extends HTMLElement {
     btn.addEventListener('mouseleave',  cancel);
     btn.addEventListener('touchend',    cancel);
     btn.addEventListener('touchcancel', cancel);
-    btn.addEventListener('click', () => { if (held) { held = false; return; } this._toggle(); });
+    btn.addEventListener('click', () => {
+      if (held) {
+        held = false;
+        return;
+      }
+      if (tapTimer) {
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        this._toggleFavorite();
+        return;
+      }
+      tapTimer = setTimeout(() => {
+        tapTimer = null;
+        this._toggle();
+      }, dblMs);
+    });
   }
 
   // ── HA service helpers ─────────────────────────────────────
@@ -758,23 +792,39 @@ class DadosCard extends HTMLElement {
     return Array.isArray(labels) && labels.includes(label);
   }
 
-  _toggleFavorite() {
+  async _toggleFavorite() {
     const entityId = this._cfg?.entity;
     if (!entityId) return;
 
     const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
-    const service = this._entityHasLabel()
-      ? 'remove_label_from_entity'
-      : 'add_label_to_entity';
+    const conn = this._hass?.connection;
+    if (!conn?.sendMessagePromise) return;
 
-    this._hass.callService('homeassistant', service, {
-      entity_id: entityId,
-      label_id: label,
-    });
+    try {
+      const entry = await conn.sendMessagePromise({
+        type: 'config/entity_registry/get',
+        entity_id: entityId,
+      });
+      const labels = Array.isArray(entry?.labels) ? entry.labels : [];
+      const hasLabel = labels.includes(label);
+      const newLabels = hasLabel
+        ? labels.filter(l => l !== label)
+        : [...labels, label];
 
-    this._stateKey = null;
-    this._update();
+      await conn.sendMessagePromise({
+        type: 'config/entity_registry/update',
+        entity_id: entityId,
+        labels: newLabels,
+      });
+
+      this._stateKey = null;
+      this._update();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('dados-card: failed to toggle favorite label', e);
+    }
   }
+
 
   _call(service, data = {}) {
     this._hass.callService('light', service, { entity_id: this._cfg.entity, ...data });
