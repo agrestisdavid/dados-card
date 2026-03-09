@@ -154,8 +154,8 @@ const STYLES = /* css */ `
     position: absolute;
     top: -0.75rem;
     right: -0.75rem;
-    width: 1.8rem;
-    height: 1.8rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border: none;
     background: transparent;
     display: flex;
