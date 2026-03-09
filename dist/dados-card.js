@@ -7,9 +7,6 @@ const DEFAULTS = {
   icon_off:        'mdi:lightbulb-outline',
   toggle_icon_on:  'mdi:toggle-switch',
   toggle_icon_off: 'mdi:toggle-switch-off-outline',
-  brightness_icon: 'mdi:brightness-percent',
-  color_temp_icon: 'mdi:thermometer',
-  hue_icon:        'mdi:palette',
   hold_ms:         500,
   glow:            true,
 };
@@ -86,7 +83,7 @@ const STYLES = /* css */ `
   /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
-    grid-template-columns: 3.375rem 1fr auto;
+    grid-template-columns: 2.8125rem 1fr auto;
     align-items: center;
     gap: 0.625rem;
     flex-shrink: 0;
@@ -94,9 +91,9 @@ const STYLES = /* css */ `
 
   /* ── Icon tile ───────────────────────────────────────────────── */
   .icon-tile {
-    width: 3.375rem;
-    height: 3.375rem;
-    border-radius: var(--dados-cell-radius, 1.375rem);
+    width: 2.8125rem;
+    height: 2.8125rem;
+    border-radius: var(--dados-cell-radius, 1.125rem);
     background: var(--dados-cell-bg, rgba(127,127,127,0.15));
     box-shadow: var(--dados-glow, none);
     display: flex;
@@ -122,7 +119,7 @@ const STYLES = /* css */ `
   .name {
     font-size: var(--dados-name-fs, 1rem);
     font-weight: 500;
-    line-height: 1.15;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -134,8 +131,6 @@ const STYLES = /* css */ `
   .state {
     font-size: var(--dados-state-fs, 0.875rem);
     font-weight: 400;
-    line-height: 1.15;
-    margin-top: -0.0625rem;
     color: var(--dados-state-color, var(--contrast12, var(--secondary-text-color)));
     letter-spacing: 0.0375rem;
     padding-left: 0.1875rem;
@@ -235,7 +230,6 @@ const STYLES = /* css */ `
     border: none;
     cursor: pointer;
   }
-
   .dado-slider::-moz-range-track {
     height: 3.5625rem;
     border-radius: var(--dados-slider-radius, 1.5rem);
@@ -253,16 +247,16 @@ const STYLES = /* css */ `
     background: transparent;
   }
 
-  /* ── Color-temp slider: warm (left) → cool (right) ── */
+  /* ── Color-temp slider: cool (left) → warm (right) ── */
   .colortemp-slider {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
+      rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 100%);
   }
 
   /* ── Hue slider: full hue rainbow (muted) ── */
@@ -323,13 +317,10 @@ const EDITOR_SCHEMA = [
   {
     type: 'expandable', title: 'Icons',
     schema: [
-      { name: 'icon_on',        label: 'Icon (An)',              selector: { icon: {} } },
-      { name: 'icon_off',       label: 'Icon (Aus)',             selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',       selector: { icon: {} } },
-      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)',      selector: { icon: {} } },
-      { name: 'brightness_icon',label: 'Helligkeit Slider Icon', selector: { icon: {} } },
-      { name: 'color_temp_icon',label: 'Farbtemperatur Slider Icon', selector: { icon: {} } },
-      { name: 'hue_icon',       label: 'Farbe (Hue) Slider Icon', selector: { icon: {} } },
+      { name: 'icon_on',        label: 'Icon (An)',         selector: { icon: {} } },
+      { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
+      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
+      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
     ],
   },
   {
@@ -457,7 +448,7 @@ class DadosCard extends HTMLElement {
                      type="range" min="1" max="255" step="1" aria-label="Helligkeit"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon id="brightIcon"></ha-icon>
+              <ha-icon icon="mdi:brightness-percent"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="ctRow">
@@ -466,7 +457,7 @@ class DadosCard extends HTMLElement {
                      type="range" step="1" aria-label="Farbtemperatur"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon id="ctIcon"></ha-icon>
+              <ha-icon icon="mdi:thermometer"></ha-icon>
             </button>
           </div>
           <div class="slider-row hidden" id="hueRow">
@@ -475,7 +466,7 @@ class DadosCard extends HTMLElement {
                      type="range" min="0" max="360" step="1" aria-label="Farbe"/>
             </div>
             <button class="ctrl-btn" tabindex="-1">
-              <ha-icon id="hueIcon"></ha-icon>
+              <ha-icon icon="mdi:palette"></ha-icon>
             </button>
           </div>
         </div>
@@ -489,10 +480,10 @@ class DadosCard extends HTMLElement {
       toggleBtn:    $('toggleBtn'), toggleIconEl:$('toggleIconEl'),
       textBlock:    $('textBlock'),
       controls:     $('controls'),
-      brightRow:    $('brightRow'), brightSlider:$('brightSlider'), brightIcon: $('brightIcon'),
+      brightRow:    $('brightRow'), brightSlider:$('brightSlider'),
       brightTrack:  $('brightTrack'), brightProgress: $('brightProgress'),
-      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),     ctIcon:     $('ctIcon'),
-      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),    hueIcon:    $('hueIcon'),
+      ctRow:        $('ctRow'),     ctSlider:    $('ctSlider'),
+      hueRow:       $('hueRow'),    hueSlider:   $('hueSlider'),
     };
     this._bindEvents();
   }
@@ -555,11 +546,9 @@ class DadosCard extends HTMLElement {
     this._lightRgb = lightRgb;
     const cfgRgb     = parseRgb(this._cfg.color);   // null for CSS vars
 
-    // effectiveRgb: used for img cell background (NOT for brightness slider)
+    // effectiveRgb: used for brightness gradient fallback
     const effectiveRgb = cfgRgb ?? lightRgb ?? FALLBACK_RGB;
-    // lightRgb stored separately so the brightness slider can fall back to the
-    // entity's actual colour without being polluted by config.color (img cell).
-    this._lightRgb = lightRgb;
+    this._effectiveRgb = effectiveRgb;       // stored for real-time brightness updates
 
     // Cell background — supports CSS vars in config.color
     const cellBg = isOn
@@ -592,12 +581,7 @@ class DadosCard extends HTMLElement {
     const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
     this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
     this._el.toggleIconEl.setAttribute('icon',
-      isOn ? (this._cfg.toggle_icon_on  || DEFAULTS.toggle_icon_on)
-           : (this._cfg.toggle_icon_off || DEFAULTS.toggle_icon_off));
-    // Slider icons — configurable, fallback to DEFAULTS
-    this._el.brightIcon.setAttribute('icon', this._cfg.brightness_icon || DEFAULTS.brightness_icon);
-    this._el.ctIcon.setAttribute('icon',     this._cfg.color_temp_icon || DEFAULTS.color_temp_icon);
-    this._el.hueIcon.setAttribute('icon',    this._cfg.hue_icon        || DEFAULTS.hue_icon);
+      isOn ? this._cfg.toggle_icon_on : this._cfg.toggle_icon_off);
 
     // ── Slider values ──────────────────────────────────────
     if (hasBright) {
@@ -608,6 +592,7 @@ class DadosCard extends HTMLElement {
     if (hasCT) {
       const minK = state.attributes.min_color_temp_kelvin ?? 2000;
       const maxK = state.attributes.max_color_temp_kelvin ?? 6535;
+
       this._el.ctSlider.min   = minK;
       this._el.ctSlider.max   = maxK;
       this._el.ctSlider.value = state.attributes.color_temp_kelvin ?? minK;
@@ -727,6 +712,7 @@ class DadosCard extends HTMLElement {
     ctSlider.addEventListener('change', e => {
       e.stopPropagation();
       this._call('turn_on', { color_temp_kelvin: +e.target.value });
+
     });
 
     hueSlider.addEventListener('change', e => {
