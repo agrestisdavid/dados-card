@@ -151,10 +151,10 @@ const STYLES = /* css */ `
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 1.75rem;
-    height: 1.75rem;
+    top: -0.35rem;
+    right: -0.35rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border: none;
     background: transparent;
     display: flex;
@@ -455,9 +455,6 @@ class DadosCard extends HTMLElement {
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Favorite">
-            <ha-icon id="toggleIconEl"></ha-icon>
-          </button>
         </div>
         <div class="controls hidden" id="controls">
           <div class="slider-row" id="brightRow">
