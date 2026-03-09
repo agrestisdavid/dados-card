@@ -770,23 +770,39 @@ class DadosCard extends HTMLElement {
     return Array.isArray(labels) && labels.includes(label);
   }
 
-  _toggleFavorite() {
+  async _toggleFavorite() {
     const entityId = this._cfg?.entity;
     if (!entityId) return;
 
     const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
-    const service = this._entityHasLabel()
-      ? 'remove_label_from_entity'
-      : 'add_label_to_entity';
+    const conn = this._hass?.connection;
+    if (!conn?.sendMessagePromise) return;
 
-    this._hass.callService('homeassistant', service, {
-      entity_id: entityId,
-      label_id: label,
-    });
+    try {
+      const entry = await conn.sendMessagePromise({
+        type: 'config/entity_registry/get',
+        entity_id: entityId,
+      });
+      const labels = Array.isArray(entry?.labels) ? entry.labels : [];
+      const hasLabel = labels.includes(label);
+      const newLabels = hasLabel
+        ? labels.filter(l => l !== label)
+        : [...labels, label];
 
-    this._stateKey = null;
-    this._update();
+      await conn.sendMessagePromise({
+        type: 'config/entity_registry/update',
+        entity_id: entityId,
+        labels: newLabels,
+      });
+
+      this._stateKey = null;
+      this._update();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('dados-card: failed to toggle favorite label', e);
+    }
   }
+
 
   _call(service, data = {}) {
     this._hass.callService('light', service, { entity_id: this._cfg.entity, ...data });
