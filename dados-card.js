@@ -517,9 +517,14 @@ class DadosCard extends HTMLElement {
     const isOn = state.state === 'on';
 
     // ── Capabilities ───────────────────────────────────────
-    const hasBright = this._supports(state, 'brightness');
-    const hasCT     = this._supports(state, 'color_temp');
-    const hasColor  = this._supports(state, 'color');
+    const hasBrightValue = typeof state.attributes.brightness === 'number';
+    const hasCTValue = typeof state.attributes.color_temp_kelvin === 'number';
+    const hasHueValue = Array.isArray(state.attributes.hs_color)
+      && typeof state.attributes.hs_color[0] === 'number';
+
+    const hasBright = this._supports(state, 'brightness') && hasBrightValue;
+    const hasCT     = this._supports(state, 'color_temp') && hasCTValue;
+    const hasColor  = this._supports(state, 'color') && hasHueValue;
     const hasAny    = hasBright || hasCT || hasColor;
 
     this._el.brightRow.classList.toggle('hidden', !hasBright);
@@ -690,12 +695,17 @@ class DadosCard extends HTMLElement {
   // ── Event binding (once) ───────────────────────────────────
 
   _bindEvents() {
-    const { textBlock, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
+    const { card, controls, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
 
-    textBlock.addEventListener('click', () => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('#iconBtn')) return;
+      if (controls.contains(e.target)) return;
       const state = this._hass?.states[this._cfg.entity];
       if (!state) return;
-      const hasAny = this._supports(state,'brightness') || this._supports(state,'color_temp') || this._supports(state,'color');
+      const hasAny =
+        (this._supports(state, 'brightness') && typeof state.attributes.brightness === 'number')
+        || (this._supports(state, 'color_temp') && typeof state.attributes.color_temp_kelvin === 'number')
+        || (this._supports(state, 'color') && Array.isArray(state.attributes.hs_color) && typeof state.attributes.hs_color[0] === 'number');
       if (!hasAny) return;
       this._expanded = !this._expanded;
       this._el.controls.classList.toggle('hidden', !this._expanded);

@@ -253,7 +253,7 @@ const STYLES = /* css */ `
   }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-high-rgb, 255, 175, 131), 1) 0%,
+      rgba(var(--temperature-high-rgb, 255, 175, 131) 0%,
       rgba(var(--temperature-low-rgb, 177, 197, 255), 1) 100%);
   }
 
@@ -271,23 +271,24 @@ const STYLES = /* css */ `
       hsl(360,65%,55%) 100%);
   }
 
-  /* ── Indicator button next to each slider ── */
+  /* ── Indicator button next to each slider (matches icon-tile) ── */
   .ctrl-btn {
     width: 3.375rem;
     height: 3.375rem;
     border: none;
     border-radius: var(--dados-cell-radius, 1.375rem);
-    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
+    background: var(--dados-cell-bg, rgba(127,127,127,0.15));
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     flex-shrink: 0;
     cursor: default;
+    transition: background 0.3s;
   }
   .ctrl-btn ha-icon {
     --mdc-icon-size: 2.25rem;
-    color: var(--dados-ctrl-icon-color, var(--contrast12, var(--secondary-text-color)));
+    color: var(--dados-icon-color, var(--contrast2, #fff));
   }
 
   .hidden { display: none !important; }
@@ -516,9 +517,14 @@ class DadosCard extends HTMLElement {
     const isOn = state.state === 'on';
 
     // ── Capabilities ───────────────────────────────────────
-    const hasBright = this._supports(state, 'brightness');
-    const hasCT     = this._supports(state, 'color_temp');
-    const hasColor  = this._supports(state, 'color');
+    const hasBrightValue = typeof state.attributes.brightness === 'number';
+    const hasCTValue = typeof state.attributes.color_temp_kelvin === 'number';
+    const hasHueValue = Array.isArray(state.attributes.hs_color)
+      && typeof state.attributes.hs_color[0] === 'number';
+
+    const hasBright = this._supports(state, 'brightness') && hasBrightValue;
+    const hasCT     = this._supports(state, 'color_temp') && hasCTValue;
+    const hasColor  = this._supports(state, 'color') && hasHueValue;
     const hasAny    = hasBright || hasCT || hasColor;
 
     this._el.brightRow.classList.toggle('hidden', !hasBright);
@@ -689,12 +695,17 @@ class DadosCard extends HTMLElement {
   // ── Event binding (once) ───────────────────────────────────
 
   _bindEvents() {
-    const { textBlock, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
+    const { card, controls, brightSlider, ctSlider, hueSlider, iconBtn } = this._el;
 
-    textBlock.addEventListener('click', () => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('#iconBtn')) return;
+      if (controls.contains(e.target)) return;
       const state = this._hass?.states[this._cfg.entity];
       if (!state) return;
-      const hasAny = this._supports(state,'brightness') || this._supports(state,'color_temp') || this._supports(state,'color');
+      const hasAny =
+        (this._supports(state, 'brightness') && typeof state.attributes.brightness === 'number')
+        || (this._supports(state, 'color_temp') && typeof state.attributes.color_temp_kelvin === 'number')
+        || (this._supports(state, 'color') && Array.isArray(state.attributes.hs_color) && typeof state.attributes.hs_color[0] === 'number');
       if (!hasAny) return;
       this._expanded = !this._expanded;
       this._el.controls.classList.toggle('hidden', !this._expanded);
