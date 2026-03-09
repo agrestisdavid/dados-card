@@ -6,6 +6,7 @@ const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
   favorite_label:  'fav',
+  show_fav:        true,
   brightness_icon: 'mdi:brightness-percent',
   color_temp_icon: 'mdi:thermometer',
   hue_icon:        'mdi:palette',
@@ -319,6 +320,7 @@ const STYLES = /* css */ `
 const EDITOR_SCHEMA = [
   { name: 'entity',   required: true, selector: { entity: { domain: 'light' } } },
   { name: 'name',     label: 'Name',  selector: { text: {} } },
+  { name: 'show_fav', label: 'Favorite-Icon anzeigen', selector: { boolean: {} } },
   {
     type: 'expandable', title: 'Farben',
     schema: [
@@ -590,8 +592,8 @@ class DadosCard extends HTMLElement {
       ? `color-mix(in srgb, ${glowColor} 80%, transparent)`
       : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
-    // Favorite state from entity registry labels
-    const isFavorite = this._entityHasLabel();
+    // Favorite icon visibility from config (independent from label state)
+    const showFav = this._cfg.show_fav !== false;
     const toggleCss = 'rgb(255, 145, 138)';
 
     // ── Text ───────────────────────────────────────────────
@@ -605,7 +607,7 @@ class DadosCard extends HTMLElement {
     const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
     this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
     this._el.toggleIconEl.setAttribute('icon', 'mdi:heart');
-    this._el.toggleBtn.classList.toggle('hidden-fav', !isFavorite);
+    this._el.toggleBtn.classList.toggle('hidden-fav', !showFav);
     // Slider icons — configurable, fallback to DEFAULTS
     this._el.brightIcon.setAttribute('icon', this._cfg.brightness_icon || DEFAULTS.brightness_icon);
     this._el.ctIcon.setAttribute('icon',     this._cfg.color_temp_icon || DEFAULTS.color_temp_icon);
