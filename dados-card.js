@@ -89,6 +89,7 @@ const STYLES = /* css */ `
     display: grid;
     grid-template-columns: 3.375rem 1fr;
     align-items: center;
+    padding-right: 1.75rem;
     gap: 0.625rem;
     flex-shrink: 0;
   }
