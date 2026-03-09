@@ -5,8 +5,6 @@ const CARD_VERSION = '1.6.0';
 const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
-  toggle_icon_on:  'mdi:heart',
-  toggle_icon_off: 'mdi:heart',
   favorite_label:  'fav',
   hold_ms:         500,
   glow:            true,
@@ -320,8 +318,6 @@ const EDITOR_SCHEMA = [
     schema: [
       { name: 'icon_on',        label: 'Icon (An)',         selector: { icon: {} } },
       { name: 'icon_off',       label: 'Icon (Aus)',        selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',  selector: { icon: {} } },
-      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)', selector: { icon: {} } },
     ],
   },
   {
@@ -436,7 +432,7 @@ class DadosCard extends HTMLElement {
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle">
+          <button class="toggle-btn" id="toggleBtn" aria-label="Favorite">
             <ha-icon id="toggleIconEl"></ha-icon>
           </button>
         </div>
