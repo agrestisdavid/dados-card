@@ -153,8 +153,8 @@ const STYLES = /* css */ `
     position: absolute;
     top: -0.35rem;
     right: -0.35rem;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.8rem;
+    height: 1.8rem;
     border: none;
     background: transparent;
     display: flex;
@@ -166,9 +166,14 @@ const STYLES = /* css */ `
   }
 
   .toggle-btn ha-icon {
-    --mdc-icon-size: 1.125rem;
+    --mdc-icon-size: 1.8rem;
     color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
+  }
+
+  .toggle-btn.hidden-fav {
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* ── Slider controls ─────────────────────────────────────────── */
@@ -587,7 +592,7 @@ class DadosCard extends HTMLElement {
 
     // Favorite state from entity registry labels
     const isFavorite = this._entityHasLabel();
-    const toggleCss = isFavorite ? 'rgb(255, 145, 138)' : '#898C94';
+    const toggleCss = 'rgb(255, 145, 138)';
 
     // ── Text ───────────────────────────────────────────────
     this._el.nameEl.textContent =
@@ -600,6 +605,7 @@ class DadosCard extends HTMLElement {
     const iconOff = this._cfg.icon_off || DEFAULTS.icon_off;
     this._el.iconEl.setAttribute('icon', isOn ? iconOn : iconOff);
     this._el.toggleIconEl.setAttribute('icon', 'mdi:heart');
+    this._el.toggleBtn.classList.toggle('hidden-fav', !isFavorite);
     // Slider icons — configurable, fallback to DEFAULTS
     this._el.brightIcon.setAttribute('icon', this._cfg.brightness_icon || DEFAULTS.brightness_icon);
     this._el.ctIcon.setAttribute('icon',     this._cfg.color_temp_icon || DEFAULTS.color_temp_icon);
