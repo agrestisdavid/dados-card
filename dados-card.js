@@ -5,8 +5,6 @@ const CARD_VERSION = '1.6.0';
 const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
-  toggle_icon_on:  'mdi:heart',
-  toggle_icon_off: 'mdi:heart',
   favorite_label:  'fav',
   brightness_icon: 'mdi:brightness-percent',
   color_temp_icon: 'mdi:thermometer',
@@ -73,6 +71,7 @@ const STYLES = /* css */ `
   }
 
   ha-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 5rem;
@@ -87,8 +86,9 @@ const STYLES = /* css */ `
   /* ── Main row: always at top, vertically centered within its own height ── */
   .row {
     display: grid;
-    grid-template-columns: 3.375rem 1fr auto;
+    grid-template-columns: 3.375rem 1fr;
     align-items: center;
+    padding-right: 1.75rem;
     gap: 0.625rem;
     flex-shrink: 0;
   }
@@ -144,22 +144,23 @@ const STYLES = /* css */ `
 
   /* ── Toggle button ───────────────────────────────────────────── */
   .toggle-btn {
-    width: 3.5625rem;
-    height: 3.5625rem;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border: none;
-    border-radius: var(--dados-toggle-radius, 1.5rem);
-    background: var(--dados-btn-bg, var(--contrast3, rgba(127,127,127,0.15)));
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    flex-shrink: 0;
-    transition: background 0.2s;
+    z-index: 2;
   }
 
   .toggle-btn ha-icon {
-    --mdc-icon-size: 2.25rem;
+    --mdc-icon-size: 1.125rem;
     color: var(--dados-toggle-color, var(--secondary-text-color));
     transition: color 0.2s;
   }
@@ -326,8 +327,6 @@ const EDITOR_SCHEMA = [
     schema: [
       { name: 'icon_on',        label: 'Icon (An)',              selector: { icon: {} } },
       { name: 'icon_off',       label: 'Icon (Aus)',             selector: { icon: {} } },
-      { name: 'toggle_icon_on', label: 'Toggle Icon (An)',       selector: { icon: {} } },
-      { name: 'toggle_icon_off',label: 'Toggle Icon (Aus)',      selector: { icon: {} } },
       { name: 'brightness_icon',label: 'Helligkeit Slider Icon', selector: { icon: {} } },
       { name: 'color_temp_icon',label: 'Farbtemperatur Slider Icon', selector: { icon: {} } },
       { name: 'hue_icon',       label: 'Farbe (Hue) Slider Icon', selector: { icon: {} } },
@@ -445,7 +444,7 @@ class DadosCard extends HTMLElement {
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
           </div>
-          <button class="toggle-btn" id="toggleBtn" aria-label="Toggle">
+          <button class="toggle-btn" id="toggleBtn" aria-label="Favorite">
             <ha-icon id="toggleIconEl"></ha-icon>
           </button>
         </div>
@@ -774,23 +773,39 @@ class DadosCard extends HTMLElement {
     return Array.isArray(labels) && labels.includes(label);
   }
 
-  _toggleFavorite() {
+  async _toggleFavorite() {
     const entityId = this._cfg?.entity;
     if (!entityId) return;
 
     const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
-    const service = this._entityHasLabel()
-      ? 'remove_label_from_entity'
-      : 'add_label_to_entity';
+    const conn = this._hass?.connection;
+    if (!conn?.sendMessagePromise) return;
 
-    this._hass.callService('homeassistant', service, {
-      entity_id: entityId,
-      label_id: label,
-    });
+    try {
+      const entry = await conn.sendMessagePromise({
+        type: 'config/entity_registry/get',
+        entity_id: entityId,
+      });
+      const labels = Array.isArray(entry?.labels) ? entry.labels : [];
+      const hasLabel = labels.includes(label);
+      const newLabels = hasLabel
+        ? labels.filter(l => l !== label)
+        : [...labels, label];
 
-    this._stateKey = null;
-    this._update();
+      await conn.sendMessagePromise({
+        type: 'config/entity_registry/update',
+        entity_id: entityId,
+        labels: newLabels,
+      });
+
+      this._stateKey = null;
+      this._update();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('dados-card: failed to toggle favorite label', e);
+    }
   }
+
 
   _call(service, data = {}) {
     this._hass.callService('light', service, { entity_id: this._cfg.entity, ...data });
