@@ -93,6 +93,12 @@ const STYLES = /* css */ `
     flex-shrink: 0;
   }
 
+  .icon-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
   /* ── Icon tile ───────────────────────────────────────────────── */
   .icon-tile {
     width: 3.375rem;
@@ -437,9 +443,14 @@ class DadosCard extends HTMLElement {
       <style>${STYLES}</style>
       <ha-card>
         <div class="row">
-          <button class="icon-tile" id="iconBtn" aria-label="Toggle">
-            <ha-icon id="iconEl"></ha-icon>
-          </button>
+          <div class="icon-wrap">
+            <button class="icon-tile" id="iconBtn" aria-label="Toggle">
+              <ha-icon id="iconEl"></ha-icon>
+            </button>
+            <button class="toggle-btn" id="toggleBtn" aria-label="Favorite">
+              <ha-icon id="toggleIconEl"></ha-icon>
+            </button>
+          </div>
           <div class="text" id="textBlock">
             <div class="name"  id="nameEl"></div>
             <div class="state" id="stateEl"></div>
@@ -741,14 +752,27 @@ class DadosCard extends HTMLElement {
   // ── Hold/tap on icon tile ──────────────────────────────────
 
   _bindHoldTap(btn) {
-    let timer = null;
-    let held  = false;
+    let holdTimer  = null;
+    let tapTimer   = null;
+    let held       = false;
+    const dblMs    = 250;
 
     const start = () => {
-      held  = false;
-      timer = setTimeout(() => { held = true; timer = null; this._moreInfo(); }, this._cfg.hold_ms);
+      held = false;
+      holdTimer = setTimeout(() => {
+        held = true;
+        holdTimer = null;
+        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+        this._moreInfo();
+      }, this._cfg.hold_ms);
     };
-    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+
+    const cancel = () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+    };
 
     btn.addEventListener('mousedown',   start);
     btn.addEventListener('touchstart',  start, { passive: true });
@@ -756,7 +780,22 @@ class DadosCard extends HTMLElement {
     btn.addEventListener('mouseleave',  cancel);
     btn.addEventListener('touchend',    cancel);
     btn.addEventListener('touchcancel', cancel);
-    btn.addEventListener('click', () => { if (held) { held = false; return; } this._toggle(); });
+    btn.addEventListener('click', () => {
+      if (held) {
+        held = false;
+        return;
+      }
+      if (tapTimer) {
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        this._toggleFavorite();
+        return;
+      }
+      tapTimer = setTimeout(() => {
+        tapTimer = null;
+        this._toggle();
+      }, dblMs);
+    });
   }
 
   // ── HA service helpers ─────────────────────────────────────
