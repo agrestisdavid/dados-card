@@ -266,16 +266,16 @@ const STYLES = /* css */ `
     background: transparent;
   }
 
-  /* ── Color-temp slider: cool (left) → warm (right) ── */
+  /* ── Color-temp slider: warm (left) → cool (right) ── */
   .colortemp-slider {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-low-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-high-rgb, 177, 197, 255), 1) 100%);
+      var(--dados-temp-warm-color, rgb(255, 175, 131)) 0%,
+      var(--dados-temp-cool-color, rgb(177, 197, 255)) 100%);
   }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-low-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-high-rgb, 177, 197, 255), 1) 100%);
+      var(--dados-temp-warm-color, rgb(255, 175, 131)) 0%,
+      var(--dados-temp-cool-color, rgb(177, 197, 255)) 100%);
   }
 
   /* ── Hue slider: full hue rainbow (muted) ── */
@@ -330,6 +330,8 @@ const EDITOR_SCHEMA = [
       { name: 'icon_color',           label: 'Icon-Farbe wenn an',                              selector: { text: {} } },
       { name: 'icon_color_off',       label: 'Icon-Farbe wenn aus',                             selector: { text: {} } },
       { name: 'brightness_color',     label: 'Brightness Slider Farbe',                         selector: { text: {} } },
+      { name: 'temp_slider_warm_color', label: 'Temp Slider Warm-Farbe (links)',                selector: { text: {} } },
+      { name: 'temp_slider_cool_color', label: 'Temp Slider Kalt-Farbe (rechts)',               selector: { text: {} } },
       { name: 'button_background',    label: 'Toggle & Slider-Icons Hintergrund',               selector: { text: {} } },
       { name: 'slider_icon_color',    label: 'Slider-Icons Farbe',                             selector: { text: {} } },
       { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
@@ -658,6 +660,9 @@ class DadosCard extends HTMLElement {
     // Button backgrounds (toggle + slider ctrl-btn)
     this._setProp(s, '--dados-btn-bg',          this._cfg.button_background);
     this._setProp(s, '--dados-ctrl-icon-color',  this._cfg.slider_icon_color);
+    // Temperature slider colors
+    this._setProp(s, '--dados-temp-warm-color', this._cfg.temp_slider_warm_color);
+    this._setProp(s, '--dados-temp-cool-color', this._cfg.temp_slider_cool_color);
     // Border radii
     this._setProp(s, '--dados-card-radius',   this._cfg.card_border_radius);
     this._setProp(s, '--dados-cell-radius',   this._cfg.cell_border_radius);
