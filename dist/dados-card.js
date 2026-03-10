@@ -1,4 +1,4 @@
-const CARD_VERSION = '1.7.0';
+const CARD_VERSION = '1.8.0';
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -266,16 +266,16 @@ const STYLES = /* css */ `
     background: transparent;
   }
 
-  /* ── Color-temp slider: cool (left) → warm (right) ── */
+  /* ── Color-temp slider: warm (left) → cool (right) ── */
   .colortemp-slider {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-low-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-high-rgb, 177, 197, 255), 1) 100%);
+      var(--dados-temp-warm-color, rgb(255, 175, 131)) 0%,
+      var(--dados-temp-cool-color, rgb(177, 197, 255)) 100%);
   }
   .colortemp-slider::-moz-range-track {
     background: linear-gradient(90deg,
-      rgba(var(--temperature-low-rgb, 255, 175, 131), 1) 0%,
-      rgba(var(--temperature-high-rgb, 177, 197, 255), 1) 100%);
+      var(--dados-temp-warm-color, rgb(255, 175, 131)) 0%,
+      var(--dados-temp-cool-color, rgb(177, 197, 255)) 100%);
   }
 
   /* ── Hue slider: full hue rainbow (muted) ── */
@@ -330,6 +330,8 @@ const EDITOR_SCHEMA = [
       { name: 'icon_color',           label: 'Icon-Farbe wenn an',                              selector: { text: {} } },
       { name: 'icon_color_off',       label: 'Icon-Farbe wenn aus',                             selector: { text: {} } },
       { name: 'brightness_color',     label: 'Brightness Slider Farbe',                         selector: { text: {} } },
+      { name: 'temp_slider_warm_color', label: 'Temp Slider Warm-Farbe (links)',                selector: { text: {} } },
+      { name: 'temp_slider_cool_color', label: 'Temp Slider Kalt-Farbe (rechts)',               selector: { text: {} } },
       { name: 'button_background',    label: 'Toggle & Slider-Icons Hintergrund',               selector: { text: {} } },
       { name: 'slider_icon_color',    label: 'Slider-Icons Farbe',                             selector: { text: {} } },
       { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
@@ -401,8 +403,8 @@ class DadosCardEditor extends HTMLElement {
   }
 }
 
-if (!customElements.get('dados-card-editor')) {
-  customElements.define('dados-card-editor', DadosCardEditor);
+if (!customElements.get('dados-light-card-editor')) {
+  customElements.define('dados-light-card-editor', DadosCardEditor);
 }
 
 // ─── Card element ─────────────────────────────────────────────
@@ -411,10 +413,10 @@ class DadosCard extends HTMLElement {
 
   // ── Static API ─────────────────────────────────────────────
 
-  static getConfigElement() { return document.createElement('dados-card-editor'); }
+  static getConfigElement() { return document.createElement('dados-light-card-editor'); }
 
   static getStubConfig() {
-    return { type: 'custom:dados-card', entity: 'light.example', name: 'Dados Light' };
+    return { type: 'custom:dados-light-card', entity: 'light.example', name: 'Dados Light' };
   }
 
   // ── HA lifecycle ───────────────────────────────────────────
@@ -658,6 +660,9 @@ class DadosCard extends HTMLElement {
     // Button backgrounds (toggle + slider ctrl-btn)
     this._setProp(s, '--dados-btn-bg',          this._cfg.button_background);
     this._setProp(s, '--dados-ctrl-icon-color',  this._cfg.slider_icon_color);
+    // Temperature slider colors
+    this._setProp(s, '--dados-temp-warm-color', this._cfg.temp_slider_warm_color);
+    this._setProp(s, '--dados-temp-cool-color', this._cfg.temp_slider_cool_color);
     // Border radii
     this._setProp(s, '--dados-card-radius',   this._cfg.card_border_radius);
     this._setProp(s, '--dados-cell-radius',   this._cfg.cell_border_radius);
@@ -762,13 +767,16 @@ class DadosCard extends HTMLElement {
 
   _bindHoldTap(btn) {
     let holdTimer = null;
+    let tapTimer  = null;
     let held      = false;
+    const dblMs   = 250;
 
     const start = () => {
       held = false;
       holdTimer = setTimeout(() => {
         held = true;
         holdTimer = null;
+        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
         this._moreInfo();
       }, this._cfg.hold_ms);
     };
@@ -788,7 +796,16 @@ class DadosCard extends HTMLElement {
     btn.addEventListener('touchcancel', cancel);
     btn.addEventListener('click', () => {
       if (held) { held = false; return; }
-      this._toggle();
+      if (tapTimer) {
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        this._toggleFavorite();
+        return;
+      }
+      tapTimer = setTimeout(() => {
+        tapTimer = null;
+        this._toggle();
+      }, dblMs);
     });
   }
 
@@ -844,14 +861,15 @@ class DadosCard extends HTMLElement {
 
 // ─── Registration ─────────────────────────────────────────────
 
+if (!customElements.get('dados-light-card')) customElements.define('dados-light-card', DadosCard);
 if (!customElements.get('dados-card')) customElements.define('dados-card', DadosCard);
 
-window.customCards ??= [];
-if (!window.customCards.some(c => c.type === 'dados-card')) {
+window.customCards = window.customCards || [];
+if (!window.customCards.some(c => c.type === 'dados-light-card')) {
   window.customCards.push({
-    type: 'custom:dados-card',
-    name: 'Dados Card',
-    description: 'Light card with dynamic glow, adaptive height, and smart sliders. · Lichtkarte mit dynamischem Leuchten, adaptiver Höhe und intelligenten Reglern.',
+    type: 'dados-light-card',
+    name: 'Dados Light Card',
+    description: 'Dados light card from the dados-cards bundle. · Lichtkarte aus dem dados-cards Bundle.',
     preview: true,
   });
 }

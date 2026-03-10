@@ -1,7 +1,7 @@
 {
-  "name": "Dados Card",
+  "name": "Dados Cards",
   "content_in_root": true,
   "render_readme": true,
-  "filename": "dados-card.js",
+  "filename": "dados-cards.js",
   "homeassistant": "2024.1.0"
 }
