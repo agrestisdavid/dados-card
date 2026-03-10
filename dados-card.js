@@ -1,11 +1,10 @@
-const CARD_VERSION = '1.6.0';
+const CARD_VERSION = '1.7.0';
 
 // ─── Constants ───────────────────────────────────────────────
 
 const DEFAULTS = {
   icon_on:         'mdi:lightbulb',
   icon_off:        'mdi:lightbulb-outline',
-  favorite_label:  'fav',
   show_fav:        true,
   brightness_icon: 'mdi:brightness-percent',
   color_temp_icon: 'mdi:thermometer',
@@ -318,9 +317,10 @@ const STYLES = /* css */ `
 // ─── Editor schema ───────────────────────────────────────────
 
 const EDITOR_SCHEMA = [
-  { name: 'entity',   required: true, selector: { entity: { domain: 'light' } } },
-  { name: 'name',     label: 'Name',  selector: { text: {} } },
-  { name: 'show_fav', label: 'Favorite-Icon anzeigen', selector: { boolean: {} } },
+  { name: 'entity',           required: true, selector: { entity: { domain: 'light' } } },
+  { name: 'favorite_entity', label: 'Favorites Entity (z.B. input_boolean)', selector: { entity: {} } },
+  { name: 'name',            label: 'Name',  selector: { text: {} } },
+  { name: 'show_fav',        label: 'Favorite-Icon anzeigen', selector: { boolean: {} } },
   {
     type: 'expandable', title: 'Farben',
     schema: [
@@ -528,13 +528,16 @@ class DadosCard extends HTMLElement {
     }
 
     const hs  = state.attributes.hs_color ?? [];
+    const favState = this._cfg.favorite_entity
+      ? (this._hass.states[this._cfg.favorite_entity]?.state ?? '')
+      : '';
     const key = [
       state.state,
       state.attributes.brightness   ?? '',
       state.attributes.color_temp_kelvin ?? '',
       state.attributes.rgb_color    ?? '',
       hs[0] ?? '',
-      this._entityHasLabel() ? 'fav:1' : 'fav:0',
+      favState,
     ].join('|');
     if (key === this._stateKey) return;
     this._stateKey = key;
@@ -565,7 +568,7 @@ class DadosCard extends HTMLElement {
     //   2. HA light's rgb_color / color_temp_kelvin → converted to RGB
     //   3. FALLBACK_RGB
     //
-    // Favorite heart colour reflects the configured label state
+    // Favorite heart colour reflects the favorite_entity state
 
     const lightRgb   = haLightRgb(state);   // may be null if no color info
     this._lightRgb = lightRgb;
@@ -593,7 +596,7 @@ class DadosCard extends HTMLElement {
       : rgba(cfgGlowRgb ?? lightRgb ?? FALLBACK_RGB, 0.8);
 
     // Favorite icon visibility: only if enabled in config and label is set
-    const isFavorite = this._entityHasLabel();
+    const isFavorite = this._isFavorite();
     const showFav = this._cfg.show_fav !== false && isFavorite;
     const toggleCss = this._cfg.toggle_color || 'rgb(255, 145, 138)';
 
@@ -758,17 +761,14 @@ class DadosCard extends HTMLElement {
   // ── Hold/tap on icon tile ──────────────────────────────────
 
   _bindHoldTap(btn) {
-    let holdTimer  = null;
-    let tapTimer   = null;
-    let held       = false;
-    const dblMs    = 250;
+    let holdTimer = null;
+    let held      = false;
 
     const start = () => {
       held = false;
       holdTimer = setTimeout(() => {
         held = true;
         holdTimer = null;
-        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
         this._moreInfo();
       }, this._cfg.hold_ms);
     };
@@ -787,20 +787,8 @@ class DadosCard extends HTMLElement {
     btn.addEventListener('touchend',    cancel);
     btn.addEventListener('touchcancel', cancel);
     btn.addEventListener('click', () => {
-      if (held) {
-        held = false;
-        return;
-      }
-      if (tapTimer) {
-        clearTimeout(tapTimer);
-        tapTimer = null;
-        this._toggleFavorite();
-        return;
-      }
-      tapTimer = setTimeout(() => {
-        tapTimer = null;
-        this._toggle();
-      }, dblMs);
+      if (held) { held = false; return; }
+      this._toggle();
     });
   }
 
@@ -811,44 +799,17 @@ class DadosCard extends HTMLElement {
   }
 
 
-  _entityHasLabel() {
-    const entityId = this._cfg?.entity;
-    const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
-    const labels = this._hass?.entities?.[entityId]?.labels;
-    return Array.isArray(labels) && labels.includes(label);
+  _isFavorite() {
+    const favEntity = this._cfg?.favorite_entity;
+    if (!favEntity) return false;
+    const state = this._hass?.states?.[favEntity];
+    return state?.state === 'on';
   }
 
-  async _toggleFavorite() {
-    const entityId = this._cfg?.entity;
-    if (!entityId) return;
-
-    const label = this._cfg?.favorite_label || DEFAULTS.favorite_label;
-    const conn = this._hass?.connection;
-    if (!conn?.sendMessagePromise) return;
-
-    try {
-      const entry = await conn.sendMessagePromise({
-        type: 'config/entity_registry/get',
-        entity_id: entityId,
-      });
-      const labels = Array.isArray(entry?.labels) ? entry.labels : [];
-      const hasLabel = labels.includes(label);
-      const newLabels = hasLabel
-        ? labels.filter(l => l !== label)
-        : [...labels, label];
-
-      await conn.sendMessagePromise({
-        type: 'config/entity_registry/update',
-        entity_id: entityId,
-        labels: newLabels,
-      });
-
-      this._stateKey = null;
-      this._update();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('dados-card: failed to toggle favorite label', e);
-    }
+  _toggleFavorite() {
+    const favEntity = this._cfg?.favorite_entity;
+    if (!favEntity || !this._hass) return;
+    this._hass.callService('homeassistant', 'toggle', { entity_id: favEntity });
   }
 
 
