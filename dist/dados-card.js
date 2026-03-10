@@ -851,10 +851,10 @@ class DadosCard extends HTMLElement {
 
 if (!customElements.get('dados-card')) customElements.define('dados-card', DadosCard);
 
-window.customCards ??= [];
+window.customCards = window.customCards || [];
 if (!window.customCards.some(c => c.type === 'dados-card')) {
   window.customCards.push({
-    type: 'custom:dados-card',
+    type: 'dados-card',
     name: 'Dados Card',
     description: 'Light card with dynamic glow, adaptive height, and smart sliders. · Lichtkarte mit dynamischem Leuchten, adaptiver Höhe und intelligenten Reglern.',
     preview: true,
