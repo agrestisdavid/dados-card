@@ -767,13 +767,16 @@ class DadosCard extends HTMLElement {
 
   _bindHoldTap(btn) {
     let holdTimer = null;
+    let tapTimer  = null;
     let held      = false;
+    const dblMs   = 250;
 
     const start = () => {
       held = false;
       holdTimer = setTimeout(() => {
         held = true;
         holdTimer = null;
+        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
         this._moreInfo();
       }, this._cfg.hold_ms);
     };
@@ -793,7 +796,16 @@ class DadosCard extends HTMLElement {
     btn.addEventListener('touchcancel', cancel);
     btn.addEventListener('click', () => {
       if (held) { held = false; return; }
-      this._toggle();
+      if (tapTimer) {
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        this._toggleFavorite();
+        return;
+      }
+      tapTimer = setTimeout(() => {
+        tapTimer = null;
+        this._toggle();
+      }, dblMs);
     });
   }
 
