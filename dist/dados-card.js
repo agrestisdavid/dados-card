@@ -809,7 +809,9 @@ class DadosCard extends HTMLElement {
   _toggleFavorite() {
     const favEntity = this._cfg?.favorite_entity;
     if (!favEntity || !this._hass) return;
-    this._hass.callService('homeassistant', 'toggle', { entity_id: favEntity });
+    const [domain] = favEntity.split('.');
+    const toggleDomain = domain || 'homeassistant';
+    this._hass.callService(toggleDomain, 'toggle', { entity_id: favEntity });
   }
 
 
