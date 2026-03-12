@@ -79,7 +79,7 @@ const STYLES = /* css */ `
     border-radius: var(--dados-card-radius, 2.25rem);
     padding: 1.3125rem 1.25rem;
     overflow: hidden;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(var(--dados-card-bg-blur, 20px));
     background: var(--dados-card-bg, var(--ha-card-background, var(--card-background-color)));
   }
 
@@ -335,6 +335,8 @@ const EDITOR_SCHEMA = [
       { name: 'button_background',    label: 'Toggle & Slider-Icons Hintergrund',               selector: { text: {} } },
       { name: 'slider_icon_color',    label: 'Slider-Icons Farbe',                             selector: { text: {} } },
       { name: 'card_background_color',label: 'Kartenhintergrund',                               selector: { text: {} } },
+      { name: 'card_background_blur', label: 'Kartenhintergrund Blur (z.B. 20px)',             selector: { text: {} } },
+      { name: 'color_off',            label: 'Farbe — Img Cell wenn aus',                      selector: { text: {} } },
     ],
   },
   {
@@ -582,10 +584,13 @@ class DadosCard extends HTMLElement {
     // entity's actual colour without being polluted by config.color (img cell).
     this._lightRgb = lightRgb;
 
-    // Cell background — supports CSS vars in config.color
+    // Cell background — supports CSS vars in config.color / config.color_off
+    const cfgOffRgb = parseRgb(this._cfg.color_off);
     const cellBg = isOn
       ? (this._cfg.color && !cfgRgb ? this._cfg.color : rgba(effectiveRgb, 1))
-      : 'var(--contrast3, rgba(127,127,127,0.15))';
+      : (this._cfg.color_off
+        ? (cfgOffRgb ? rgba(cfgOffRgb, 1) : this._cfg.color_off)
+        : 'var(--contrast3, rgba(127,127,127,0.15))');
 
     // Glow priority: custom color (glow_color or color) → HA rgb/color_temp → fallback RGB
     const glowColor = (this._cfg.glow_color ?? this._cfg.color ?? '').toString().trim();
@@ -657,6 +662,7 @@ class DadosCard extends HTMLElement {
     this._setProp(s, '--dados-state-color',this._cfg.state_color);
     // Card background
     this._setProp(s, '--dados-card-bg',    this._cfg.card_background_color);
+    this._setProp(s, '--dados-card-bg-blur', this._cfg.card_background_blur);
     // Button backgrounds (toggle + slider ctrl-btn)
     this._setProp(s, '--dados-btn-bg',          this._cfg.button_background);
     this._setProp(s, '--dados-ctrl-icon-color',  this._cfg.slider_icon_color);
