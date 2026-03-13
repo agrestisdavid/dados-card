@@ -1,4 +1,4 @@
-const CARD_VERSION = '1.7.0';
+const CARD_VERSION = '1.8.0';
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -405,8 +405,8 @@ class DadosCardEditor extends HTMLElement {
   }
 }
 
-if (!customElements.get('dados-card-editor')) {
-  customElements.define('dados-card-editor', DadosCardEditor);
+if (!customElements.get('dados-light-card-editor')) {
+  customElements.define('dados-light-card-editor', DadosCardEditor);
 }
 
 // ─── Card element ─────────────────────────────────────────────
@@ -415,10 +415,10 @@ class DadosCard extends HTMLElement {
 
   // ── Static API ─────────────────────────────────────────────
 
-  static getConfigElement() { return document.createElement('dados-card-editor'); }
+  static getConfigElement() { return document.createElement('dados-light-card-editor'); }
 
   static getStubConfig() {
-    return { type: 'custom:dados-card', entity: 'light.example', name: 'Dados Light' };
+    return { type: 'custom:dados-light-card', entity: 'light.example', name: 'Dados Light' };
   }
 
   // ── HA lifecycle ───────────────────────────────────────────
@@ -867,14 +867,15 @@ class DadosCard extends HTMLElement {
 
 // ─── Registration ─────────────────────────────────────────────
 
+if (!customElements.get('dados-light-card')) customElements.define('dados-light-card', DadosCard);
 if (!customElements.get('dados-card')) customElements.define('dados-card', DadosCard);
 
 window.customCards = window.customCards || [];
-if (!window.customCards.some(c => c.type === 'dados-card')) {
+if (!window.customCards.some(c => c.type === 'dados-light-card')) {
   window.customCards.push({
-    type: 'dados-card',
-    name: 'Dados Card',
-    description: 'Light card with dynamic glow, adaptive height, and smart sliders. · Lichtkarte mit dynamischem Leuchten, adaptiver Höhe und intelligenten Reglern.',
+    type: 'dados-light-card',
+    name: 'Dados Light Card',
+    description: 'Dados light card from the dados-cards bundle. · Lichtkarte aus dem dados-cards Bundle.',
     preview: true,
   });
 }
